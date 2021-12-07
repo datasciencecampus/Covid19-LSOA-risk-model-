@@ -67,6 +67,21 @@ from utils import config as cf
 # probably move these elsewhere once done
 
 def read_data(table_type, table_dict = cf.data_tables, join_col = 'LSOA11CD'):
+    '''
+    Read in and join a list of data tables on a common column.
+    
+    :param table_type: Type of tables to read in, must be one of 'static' or 'dynamic'. This is fed into the table_dict parameter and will determine the list of tables to read in. 
+    :type table_type: string
+    
+    :param table_dict: Dictionary of tables to read in where the values are lists of strings of table names for this function to read in. These strings feed into the DataFactory.get() function within src/data_access/data_factory.py. Defaults to the data_tables variable within src/data_access/config.py
+    :type table_dict: dictionary
+    
+    :param join_col: The common column on which to join ALL of the tables. Any common columns not specified here will be dropped from the right table in each join. Defaults to 'LSOA11CD'
+    :type join_col: string or list of strings
+    
+    :return: DataFrame of joined datasets
+    :rtype: Pandas DataFrame
+    '''
     table_list = table_dict[table_type]
     
     df_final = pd.DataFrame()
@@ -84,6 +99,20 @@ def read_data(table_type, table_dict = cf.data_tables, join_col = 'LSOA11CD'):
     return df_final
 
 def geo_merge(df, geo_col = 'geometry'):
+    '''
+    Add on geographic information with an 'Area' column, and combine intermediate travel clusters. 
+    
+    :param df: Input dataframe, from read_data function. Requires 'travel_cluster' column for travel cluster grouping function.
+    :type df: Pandas DataFrame
+    
+    :param geo_col: Name of column from which to calculate the area
+    :type geo_col: string
+    
+    :return: DataFrame with Area and combined and renamed travel cluster groupings
+    :rtype: Pandas DataFrame
+    
+    '''
+    
     # merge geo data to get areas of each LSOA
     gdf = gpd.GeoDataFrame(df, crs="EPSG:27700", geometry=static_df[geo_col])
     gdf.crs
@@ -95,14 +124,59 @@ def geo_merge(df, geo_col = 'geometry'):
     return df
 
 def normalise_data(df, flag, dic = cf.features_dict):
+    
+    '''
+    Apply the normalise function from src/utils/data.py, which normalises 1 or more columns by the sum of those columns, or by the value of another supplied column, depending on whether the 'by' parameter is None or not. The details for each call to this function is held in the config file in the features_dict dictionary. The values to be used are dictionaries themselves and have a 'flag' key with value 'static', 'dynamic_norm', or 'dynamic', denoting where they are used.
+    
+    :param df: Input DataFrame, resulting from calls to the read_data and geo_merge functions.
+    :type df: Pandas DataFrame
+    
+    :param flag: Which type of features to select - one of 'static', 'dynamic', or 'dynamic_norm'. 
+    :type flag: string
+    
+    :param dic: Dictionary containing the normalise function call information. Defaults to src/utils/config.py features_dict.
+    :type dic: dictionary
+    
+    :return: DataFrame with normalised columns. Original columns will be changed if no suffix is supplied in config file.
+    :rtype: Pandas DataFrame
+    
+    '''
+    
     keys = [key for key in dic.keys() if type(dic[key]) == dict and dic[key]['flag'] == flag]
     
     for key in keys:
-        df = dt.normalise(df, dic[key]['cols'], by = dic[key]['by'], suffix=dic[key]['suffix'])
+        
+        if not dic[key]['by']:
+            norm_by = None
+        else:
+            norm_by = df[dic[key]['by']]
+            
+        df = dt.normalise(df, dic[key]['columns'], by = norm_by, suffix=dic[key]['suffix'])
     
     return df
 
 def ffill_cum(df, sort_col='Date', col_substring = '_norm_lag', group_col = 'LSOA11CD'):
+    
+    '''
+    Perform forward fill on cumulative sum columns. This is needed because cumulative sums have been performed on the source data which does not have entries for every day.
+    
+    :param df: Input dataset, typically resulting from calls to read_data and other subsequent preprocessing functions.
+    :type df: Pandas DataFrame
+    
+    :param sort_col: Column(s) by which to sort the dataframes prior to forward filling, defaults to 'Date'. 
+    :type sort_col: string, or list of strings
+    
+    :param col_substring: Substring to search for in the columns of the df, to provide the list of columns to forward fill. Defaults to '_norm_lag'.
+    :type col_substring: string
+    
+    :param group_col: Column(s) to group by prior to forward filling. Defaults to 'LSOA11CD'.
+    :type group_col: string, or list of strings
+    
+    :return: DataFrame with fixed cumulative sums and 0s in place of any starting NaNs should there be any.
+    :rtype: Pandas DataFrame
+    
+    '''
+    
     df = df.sort_values(by=sort_col)
     df.replace(0, np.nan, inplace=True)
     
@@ -110,7 +184,7 @@ def ffill_cum(df, sort_col='Date', col_substring = '_norm_lag', group_col = 'LSO
     
     df[cols] = df.groupby(group_col)[cols].ffill().fillna(0).astype(float)
     
-    df.fillna(0)
+    df.fillna(0, inplace=True)
     
     return df
 
@@ -181,8 +255,8 @@ dynamic_df_norm.to_gbq(cf.dynamic_data_file_normalised, project_id=cf.project_na
 ########################
 # lag section
 
-dynamic_df['Date'] = pd.to_datetime(dynamic_df['Date']).dt.tz_convert(None)
-dynamic_df_norm['Date'] = pd.to_datetime(dynamic_df_norm['Date']).dt.tz_convert(None)
+dynamic_df['Date'] = pd.to_datetime(dynamic_df['Date'])
+dynamic_df_norm['Date'] = pd.to_datetime(dynamic_df_norm['Date'])
 
 # stationarity check - have as optional output printed to file?
 # ignoring for now
