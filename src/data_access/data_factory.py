@@ -94,7 +94,13 @@ class DataFactory:
                 table = conf.dynamic_data_file_normalised
                 query = f"SELECT * FROM `{table}`" #created in create_dynamic, used in apply_timelag
                 return NoProcessing(query)
-            
+            if data_name == 'LSOA_feature_distribution':
+                query="SELECT * FROM `wip.multi_grp_coef_no_zir_only_static_fa_vizpre_quintile`"
+                return NoProcessing(query)
+            if data_name == 'coefficients':
+                query="SELECT * FROM `ons-hotspot-prod.wip.multi_grp_coef_no_zir_static_dynamic_tranches`"
+                return NoProcessing(query)
+        
             raise Exception('Data Class Not Found')
         except Exception as _e:
             print(_e)
