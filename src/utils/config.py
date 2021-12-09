@@ -292,3 +292,47 @@ model_suffixes = {
 for model in model_suffixes.keys():
     if not zero_infltd_modl:
         model_suffixes[model] = '_no' + model_suffixes[model]
+        
+        
+## Pretty feature names for dashboard
+feature_pretty_names = {
+                       # process features (factor scores and normalised values) 
+                       'IMD_INCOME_SCORE':'IMD Income Score',
+                       'imd_income_score':'IMD Income Score',
+                       'METHOD_OF_TRAVEL_TO_WORK_Public_TRANSPORT':'Commute Method - Public Transport',
+                       'method_of_travel_to_work_public_transport':'Commute Method - Public Transport',
+                       'METHOD_OF_TRAVEL_TO_WORK_WORK_MAINLY_FROM_HOME':'Commute Method - Work From Home',
+                       'method_of_travel_to_work_work_mainly_from_home':'Commute Method - Work From Home',
+                       'STUDENT_LIVING_WITH_PARENTS':'Student Living With Parents',
+                       'student_living_with_parents':'Student Living With Parents',
+                       'care_homes_and_workers':'Care Home and Workers',
+                       'high_risk_industry_workers':'High Risk Industry Workers',
+                       'middle_age_groups_medium_hh':'Middle Age Groups Medium HH Size',
+                       'non_white_pop_larger_hh':'Non White Population, Larger HH Size',
+                       'older_pop_smaller_hh':'Older Population, Smaller HH Size',
+                       'smaller_hh_no_children':'Smaller HH Size, No Children',
+    
+                        # quintiles
+                       'IMD_INCOME_SCORE_quint':'IMD Income Score Quintile',
+                       'METHOD_OF_TRAVEL_TO_WORK_Public_TRANSPORT_quint':'Commute Method - Public Transport Quintile',
+                       'METHOD_OF_TRAVEL_TO_WORK_WORK_MAINLY_FROM_HOME_quint':'Commute Method - Work From Home Quintile',
+                       'STUDENT_LIVING_WITH_PARENTS_quint':'Student Living With Parents Quintile',
+                       'care_homes_and_workers_quint':'Care Home and Workers Quintile',
+                       'high_risk_industry_workers_quint':'High Risk Industry Workers Quintile',
+                       'middle_age_groups_medium_hh_quint':'Middle Age Groups Medium HH Size Quintile',
+                       'non_white_pop_larger_hh_quint':'Non White Population, Larger HH Size Quintile',
+                       'older_pop_smaller_hh_quint':'Older Population, Smaller HH Size Quintile',
+                       'smaller_hh_no_children_quint':'Smaller HH Size, No Children Quintile'}
+
+# Travel cluster pretty names for dashboard
+tc_pretty_names = {'L1. >70% metropolitan core dwellers':' >70% Metropilitan Core Dwellers',
+                  'L2. >70% outer metropolitan dwellers':'>70% Outer Metropolitan Core Dwellers',
+                  'L3. >70% suburban dwellers':'>70% Suburban Dwellers',
+                  'L4. >70% exurban dwellers':'>70% Exurban Dwellers',
+                  'L5. >70% rural dwellers':'>70% Rural Dwellers'}
+
+
+
+
+
+
