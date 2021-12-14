@@ -76,6 +76,7 @@ def read_data(table_type, table_dict = cf.data_tables, join_col = 'LSOA11CD'):
     :return: DataFrame of joined datasets
     :rtype: Pandas DataFrame
     '''
+    
     table_list = table_dict[table_type]
     
     df_final = pd.DataFrame()
@@ -85,7 +86,7 @@ def read_data(table_type, table_dict = cf.data_tables, join_col = 'LSOA11CD'):
         if len(df_final) == 0:
             df_final = df
         else:
-            df_final = df_final.merge(df, on=join_col, how='left', suffixes=['', '_drop'])
+            df_final = df_final.merge(df, on=join_col, how='outer', suffixes=['', '_drop'])
             
     drop_cols = [col for col in df_final.columns if col.endswith('_drop')]
     df_final.drop(columns=drop_cols, inplace=True)
@@ -149,7 +150,7 @@ def normalise_data(df, flag, dic = cf.features_dict):
     
     return df
 
-def ffill_cum(df, sort_col='Date', col_substring = '_norm_lag', group_col = 'LSOA11CD'):
+def ffill_cum(df, sort_col='Date', col_suffix = '_norm_lag', group_col = 'LSOA11CD'):
     
     '''
     Perform forward fill on cumulative sum columns. This is needed because cumulative sums have been performed on the source data which does not have entries for every day.
@@ -160,7 +161,7 @@ def ffill_cum(df, sort_col='Date', col_substring = '_norm_lag', group_col = 'LSO
     :param sort_col: Column(s) by which to sort the dataframes prior to forward filling, defaults to 'Date'. 
     :type sort_col: string, or list of strings
     
-    :param col_substring: Substring to search for in the columns of the df, to provide the list of columns to forward fill. Defaults to '_norm_lag'.
+    :param col_suffix: Suffix to search for in the columns of the df, to provide the list of columns to forward fill. Defaults to '_norm_lag'.
     :type col_substring: string
     
     :param group_col: Column(s) to group by prior to forward filling. Defaults to 'LSOA11CD'.
@@ -174,7 +175,7 @@ def ffill_cum(df, sort_col='Date', col_substring = '_norm_lag', group_col = 'LSO
     df = df.sort_values(by=sort_col)
     df.replace(0, np.nan, inplace=True)
     
-    cols = [col for col in df.columns if col_substring in col]
+    cols = [col for col in df.columns if col.endswith(col_suffix)]
     
     df[cols] = df.groupby(group_col)[cols].ffill().fillna(0).astype(float)
     

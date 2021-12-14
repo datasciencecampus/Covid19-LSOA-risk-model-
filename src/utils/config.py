@@ -215,7 +215,7 @@ features_dict['dynamic_area_norm'] = {
 features_dict['dynamic_pop'] = {
      'flag': 'dynamic'
     ,'by': 'ALL_PEOPLE'
-    ,'suffix': '_norm2'
+    ,'suffix': 'pop_norm'
     ,'columns': ['total_vaccinated_first_dose','total_vaccinated_second_dose', 'full_vacc_cumsum',
                 'COVID_Cases', 'cases_cumsum']
 }
@@ -223,7 +223,7 @@ features_dict['dynamic_pop'] = {
 features_dict['dynamic_area'] = {
      'flag': 'dynamic'
     ,'by': 'Area'
-    ,'suffix': '_norm2'
+    ,'suffix': 'area_norm'
     ,'columns': ['COVID_Cases', 'cases_cumsum']
 }
 

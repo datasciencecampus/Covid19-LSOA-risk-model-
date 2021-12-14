@@ -13,7 +13,7 @@ current_path = os.path.abspath('.')
 sys.path.append(os.path.dirname(current_path))
 
 from data_access.data_factory import DataFactory as factory
-from data_access import prep_static as pp
+from data_access import prep_pipeline as pp
 from utils import data as dt
 from utils import config as cf
 
@@ -73,7 +73,7 @@ dynamic_df_norm = pp.ffill_cum(dynamic_df_norm)
 # normalise the original dynamic df
 dynamic_df = pp.normalise_data(dynamic_df, 'dynamic')
 
-dynamic_df = pp.ffill_cum(dynamic_df, col_substring='_norm2')
+dynamic_df = pp.ffill_cum(dynamic_df, col_suffix='_norm')
                        
 # TODO: rename columns (or change subsequent code to use the new ones...)
 # also think of better suffix for these columns
