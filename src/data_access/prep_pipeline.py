@@ -57,6 +57,7 @@ sys.path.append(os.path.dirname(current_path))
 from data_access.data_factory import DataFactory as factory
 from utils import data as dt
 from utils import config as cf
+import utils.dynamic as dyn
 
 #############################
 
@@ -145,12 +146,14 @@ def normalise_data(df, flag, dic = cf.features_dict):
             norm_by = None
         else:
             norm_by = df[dic[key]['by']]
+        
+        print('Normalise: ' + '\n'.join(dic[key]['columns']))
             
         df = dt.normalise(df, dic[key]['columns'], by = norm_by, suffix=dic[key]['suffix'])
     
     return df
 
-def ffill_cum(df, sort_col='Date', col_suffix = '_norm_lag', group_col = 'LSOA11CD'):
+def ffill_cum(df, col_list, sort_col='Date', group_col = 'LSOA11CD'):
     
     '''
     Perform forward fill on cumulative sum columns. This is needed because cumulative sums have been performed on the source data which does not have entries for every day.
@@ -158,11 +161,11 @@ def ffill_cum(df, sort_col='Date', col_suffix = '_norm_lag', group_col = 'LSOA11
     :param df: Input dataset, typically resulting from calls to read_data and other subsequent preprocessing functions.
     :type df: Pandas DataFrame
     
+    :param col_list: List of columns to perform forward fill on
+    :type col_list: List of strings
+    
     :param sort_col: Column(s) by which to sort the dataframes prior to forward filling, defaults to 'Date'. 
     :type sort_col: string, or list of strings
-    
-    :param col_suffix: Suffix to search for in the columns of the df, to provide the list of columns to forward fill. Defaults to '_norm_lag'.
-    :type col_substring: string
     
     :param group_col: Column(s) to group by prior to forward filling. Defaults to 'LSOA11CD'.
     :type group_col: string, or list of strings
@@ -175,9 +178,9 @@ def ffill_cum(df, sort_col='Date', col_suffix = '_norm_lag', group_col = 'LSOA11
     df = df.sort_values(by=sort_col)
     df.replace(0, np.nan, inplace=True)
     
-    cols = [col for col in df.columns if col.endswith(col_suffix)]
+    print('ffill: ' + '\n'.join(col_list))
     
-    df[cols] = df.groupby(group_col)[cols].ffill().fillna(0).astype(float)
+    df[col_list] = df.groupby(group_col)[col_list].ffill().fillna(0).astype(float)
     
     df.fillna(0, inplace=True)
     
@@ -308,12 +311,12 @@ def apply_timelag(dynamic_df, dynamic_df_norm):
                 "cumsum_divided_area":"COVID_Cases_per_unit_area_cumsum",
                 "pct_infected_all_time":"COVID_Cases_prop_population_cumsum"})
     
-    if flg_stnrty_both:
-        dynamic_df_lagged_merged.to_gbq(cf.lagged_dynamic_stationary,\
-                               project_id = project_name,if_exists='replace')
-    else:
-        dynamic_df_lagged_merged.to_gbq(cf.lagged_dynamic_non_stationary,\
-                                                 project_id=project_name,if_exists='replace')
+    # if flg_stnrty_both:
+    #     dynamic_df_lagged_merged.to_gbq(cf.lagged_dynamic_stationary,\
+    #                            project_id = project_name,if_exists='replace')
+    # else:
+    #     dynamic_df_lagged_merged.to_gbq(cf.lagged_dynamic_non_stationary,\
+    #                                              project_id=project_name,if_exists='replace')
     
     return dynamic_df_lagged_merged
     

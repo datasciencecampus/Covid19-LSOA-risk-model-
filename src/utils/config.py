@@ -215,7 +215,7 @@ features_dict['dynamic_area_norm'] = {
 features_dict['dynamic_pop'] = {
      'flag': 'dynamic'
     ,'by': 'ALL_PEOPLE'
-    ,'suffix': 'pop_norm'
+    ,'suffix': '_pop_norm'
     ,'columns': ['total_vaccinated_first_dose','total_vaccinated_second_dose', 'full_vacc_cumsum',
                 'COVID_Cases', 'cases_cumsum']
 }
@@ -223,10 +223,19 @@ features_dict['dynamic_pop'] = {
 features_dict['dynamic_area'] = {
      'flag': 'dynamic'
     ,'by': 'Area'
-    ,'suffix': 'area_norm'
+    ,'suffix': '_area_norm'
     ,'columns': ['COVID_Cases', 'cases_cumsum']
 }
 
+# listing which columns need to be forward filled for dynamic data processing
+# these are cumulative sums which have been done over incomplete data
+# therefore at the end of processing will have NaNs where the original data had no entry
+# the forward fill deals with this issue
+ffill_cols = {}
+
+ffill_cols['dynamic_norm'] = ['cumsum_norm_lag_pop', 'full_vacc_cumsum_norm_lag_pop', 'cases_cumsum_norm_lag_area']
+
+ffill_cols['dynamic'] = ['pct_infected_all_time', 'pct_of_people_full_vaccinated', 'cumsum_divided_area']
 
 
 
