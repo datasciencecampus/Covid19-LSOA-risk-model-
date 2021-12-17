@@ -296,7 +296,7 @@ for model in model_suffixes.keys():
         
 ## Pretty feature names for dashboard
 feature_pretty_names = {
-                       # process features (factor scores and normalised values) 
+                       # processed features (factor scores and normalised values) 
                        'IMD_INCOME_SCORE':'IMD Income Score',
                        'imd_income_score':'IMD Income Score',
                        'METHOD_OF_TRAVEL_TO_WORK_Public_TRANSPORT':'Commute Method - Public Transport',
@@ -311,6 +311,18 @@ feature_pretty_names = {
                        'non_white_pop_larger_hh':'Non White Population, Larger HH Size',
                        'older_pop_smaller_hh':'Older Population, Smaller HH Size',
                        'smaller_hh_no_children':'Smaller HH Size, No Children',
+                    
+                        # simpler model features
+                       'census_2011_asian_asian_british':'Asian/Asian British',
+                       'CENSUS_2011_ASIAN_ASIAN_BRITISH':'Asian/Asian British',
+                       'method_of_travel_to_work_non_motorised':'Commute Method - Non Motorised',
+                       'METHOD_OF_TRAVEL_TO_WORK_NON_MOTORISED':'Commute Method - Non Motorised',
+                       'families_with_dependent_children_no_dependent_children':'No Dependent Children',
+                       'FAMILIES_WITH_DEPENDENT_CHILDREN_NO_DEPENDENT_CHILDREN':'No Dependent Children',
+                       'care_homes_warehousing_textiles':'Care, Warehouse, Textiles Workers',
+                       'meat_and_fish_processing':'Meat & Fish Processing Workers',
+                       'ready_meals':'Ready Meals Workers',
+                       'worker_visitor_footfall_sqm':'Worker Visitor Footfall',
     
                         # quintiles
                        'IMD_INCOME_SCORE_quint':'IMD Income Score Quintile',
@@ -322,7 +334,17 @@ feature_pretty_names = {
                        'middle_age_groups_medium_hh_quint':'Middle Age Groups Medium HH Size Quintile',
                        'non_white_pop_larger_hh_quint':'Non White Population, Larger HH Size Quintile',
                        'older_pop_smaller_hh_quint':'Older Population, Smaller HH Size Quintile',
-                       'smaller_hh_no_children_quint':'Smaller HH Size, No Children Quintile'}
+                       'smaller_hh_no_children_quint':'Smaller HH Size, No Children Quintile',
+                       'CENSUS_2011_ASIAN_ASIAN_BRITISH_quint':'Asian/Asian British Quintile',
+                       'FAMILIES_WITH_DEPENDENT_CHILDREN_NO_DEPENDENT_CHILDREN_quint':'No Dependent Children Quintile',
+                       'METHOD_OF_TRAVEL_TO_WORK_NON_MOTORISED_quint':'Commute Method - Non Motorised Quintile',
+                       'meat_and_fish_processing_quint':'Meat & Fish Processing Workers Quintile',
+                       'care_homes_warehousing_textiles_quint':'Care, Warehouse, Textiles Workers Quintile',
+                       'worker_visitor_footfall_sqm_quint':'Worker Visitor Footfall Quintile',
+                        
+                        # ready meals rank
+                       'ready_meals_rank':'Ready Meals Workers Rank'
+                         }
 
 # Travel cluster pretty names for dashboard
 tc_pretty_names = {'L1. >70% metropolitan core dwellers':' >70% Metropilitan Core Dwellers',
@@ -330,6 +352,13 @@ tc_pretty_names = {'L1. >70% metropolitan core dwellers':' >70% Metropilitan Cor
                   'L3. >70% suburban dwellers':'>70% Suburban Dwellers',
                   'L4. >70% exurban dwellers':'>70% Exurban Dwellers',
                   'L5. >70% rural dwellers':'>70% Rural Dwellers'}
+
+# Travel cluster short names for dashboard
+tc_short_names = {'L1. >70% metropolitan core dwellers':'Metro Core',
+                  'L2. >70% outer metropolitan dwellers':'Outer Metro',
+                  'L3. >70% suburban dwellers':'Suburban',
+                  'L4. >70% exurban dwellers':'Exurban',
+                  'L5. >70% rural dwellers':'Rural'}
 
 
 
