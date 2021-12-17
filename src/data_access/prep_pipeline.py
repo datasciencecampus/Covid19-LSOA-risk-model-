@@ -146,14 +146,12 @@ def normalise_data(df, flag, dic = cf.features_dict):
             norm_by = None
         else:
             norm_by = df[dic[key]['by']]
-        
-        print('Normalise: ' + '\n'.join(dic[key]['columns']))
-            
+           
         df = dt.normalise(df, dic[key]['columns'], by = norm_by, suffix=dic[key]['suffix'])
     
     return df
 
-def ffill_cum(df, col_list, sort_col='Date', group_col = 'LSOA11CD'):
+def ffill_cumsum(df, col_list, sort_col='Date', group_col = 'LSOA11CD'):
     
     '''
     Perform forward fill on cumulative sum columns. This is needed because cumulative sums have been performed on the source data which does not have entries for every day.
@@ -175,10 +173,9 @@ def ffill_cum(df, col_list, sort_col='Date', group_col = 'LSOA11CD'):
     
     '''
     
-    df = df.sort_values(by=sort_col)
+    df.sort_values(by=sort_col, inplace=True)
+    df.reset_index(drop=True, inplace=True)
     df.replace(0, np.nan, inplace=True)
-    
-    print('ffill: ' + '\n'.join(col_list))
     
     df[col_list] = df.groupby(group_col)[col_list].ffill().fillna(0).astype(float)
     
@@ -311,12 +308,12 @@ def apply_timelag(dynamic_df, dynamic_df_norm):
                 "cumsum_divided_area":"COVID_Cases_per_unit_area_cumsum",
                 "pct_infected_all_time":"COVID_Cases_prop_population_cumsum"})
     
-    # if flg_stnrty_both:
-    #     dynamic_df_lagged_merged.to_gbq(cf.lagged_dynamic_stationary,\
-    #                            project_id = project_name,if_exists='replace')
-    # else:
-    #     dynamic_df_lagged_merged.to_gbq(cf.lagged_dynamic_non_stationary,\
-    #                                              project_id=project_name,if_exists='replace')
+    if flg_stnrty_both:
+        dynamic_df_lagged_merged.to_gbq(cf.lagged_dynamic_stationary,\
+                               project_id = project_name,if_exists='replace')
+    else:
+        dynamic_df_lagged_merged.to_gbq(cf.lagged_dynamic_non_stationary,\
+                                                 project_id=project_name,if_exists='replace')
     
     return dynamic_df_lagged_merged
     

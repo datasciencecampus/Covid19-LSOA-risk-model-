@@ -233,11 +233,47 @@ features_dict['dynamic_area'] = {
 # the forward fill deals with this issue
 ffill_cols = {}
 
-ffill_cols['dynamic_norm'] = ['cumsum_norm_lag_pop', 'full_vacc_cumsum_norm_lag_pop', 'cases_cumsum_norm_lag_area']
+ffill_cols['dynamic_norm'] = ['cases_cumsum_norm_lag_pop', 'full_vacc_cumsum_norm_lag_pop', 'cases_cumsum_norm_lag_area']
 
-ffill_cols['dynamic'] = ['pct_infected_all_time', 'pct_of_people_full_vaccinated', 'cumsum_divided_area']
+ffill_cols['dynamic'] = ['cases_cumsum_pop_norm', 'full_vacc_cumsum_pop_norm', 'cases_cumsum_area_norm']
 
+# drop columns which were replaced in the original dynamic preprocessing script
+dynamic_col_drop = ['COVID_Cases', 'total_vaccinated_first_dose','total_vaccinated_second_dose']
 
+# rename new columns in dynamic data preprocessing to match original column names
+dynamic_rename = {
+ 'COVID_Cases_area_norm': 'COVID_Cases'
+ ,'COVID_Cases_pop_norm': 'cases_per_person'
+ ,'cases_cumsum_area_norm': 'cumsum_divided_area'
+ ,'cases_cumsum_pop_norm': 'pct_infected_all_time'
+ ,'full_vacc_cumsum_pop_norm': 'pct_of_people_full_vaccinated'
+ ,'total_vaccinated_first_dose_pop_norm': 'total_vaccinated_first_dose'
+ ,'total_vaccinated_second_dose_pop_norm': 'total_vaccinated_second_dose'}
+
+# columns dropped in VIF statistic notebook
+vif_col_drop = ['BAME_PROP',
+ 'STUDENT_LIVING_IN_A_COMMUNAL_ESTABLISHMENT_TOTAL',
+ 'COMMUNAL_ESTABLISHMENT_MEDICAL_AND_CARE_TOTAL',
+ 'CENSUS_2011_BLACK_AFRICAN_CARIBBEAN_BLACK_BRITISH',
+ 'HEALTH_AGE_50_to_64_BAD_HEALTH',
+ 'HEALTH_AGE_75_PLUS_BAD_HEALTH',
+ 'HEALTH_AGE_50_to_64_GOOD_FAIR_HEALTH',
+ 'METHOD_OF_TRAVEL_TO_WORK_PRIVATE_TRANSPORT',
+ 'IMD_SCORE',
+ 'HEALTH_AGE_UNDER_50_GOOD_FAIR_HEALTH',
+ 'HEALTH_AGE_65_to_74_BAD_HEALTH',
+ 'ALL_PEOPLE',
+ 'LSOA11NMW',
+ 'Area',
+ 'NO_UNPAID_CARE',
+ 'HEALTH_AGE_75_PLUS_GOOD_FAIR_HEALTH',
+ 'HOUSEHOLD_SIZE_1_PERSON_IN_HOUSEHOLD',
+ 'IMD_EMPLOYMENT_SCORE',
+ 'age_18_to_29',
+ 'HEALTH_AGE_65_to_74_GOOD_FAIR_HEALTH',
+ 'HEALTH_AGE_UNDER_50_BAD_HEALTH',
+ 'geometry',
+ 'FAMILIES_WITH_DEPENDENT_CHILDREN_ALL_FAMILIES']
 
 # User inputs the location of data they wish to use 
 
@@ -254,13 +290,14 @@ data_location_big_query['mobility_DEIMOS'] = "ons-hotspot-prod.wip.people_counts
 # file names
 project_name = 'ons-hotspot-prod'
 
-static_data_file = 'wip.static_lsoa_variables'
-dynamic_data_file = 'wip.dynamic_lsoa_variables'
-dynamic_data_file_normalised = 'wip.dynamic_lsoa_variables_raw_norm_chsn_lag'
+static_data_file = 'review_ons.static_lsoa_variables'
+dynamic_data_file = 'review_ons.dynamic_lsoa_variables'
+dynamic_data_file_normalised = 'review_ons.dynamic_lsoa_variables_raw_norm_chsn_lag'
 
-lagged_dynamic_stationary = 'wip.time_lagged_dynamic_data_deimos_cumsum_stationary_main'
-lagged_dynamic_non_stationary = 'wip.time_lagged_dynamic_data_deimos_cumsum_non_stationary_main'
+lagged_dynamic_stationary = 'review_ons.time_lagged_dynamic_data_deimos_cumsum_stationary_main'
+lagged_dynamic_non_stationary = 'review_ons.time_lagged_dynamic_data_deimos_cumsum_non_stationary_main'
 
+static_data_file_vif = 'review_ons.risk_model_static_variables_main'
 
 # zero-inflated model training
 zero_infltd_modl=False
@@ -288,9 +325,9 @@ dynamic_mobility=['worker_visitor_footfall_sqkm','resident_footfall_sqkm','commu
 
 # GCP dataset prefix for static and dynamic risk model outputs
 # suffix will change for static/dynamic and whether zero inflation is applied
-risk_coef = 'wip.multi_grp_coef'
-risk_coef_ci = 'wip.multi_grp_coef_ci'
-risk_pred = 'wip.multi_grp_pred'
+risk_coef = 'review_ons.multi_grp_coef'
+risk_coef_ci = 'review_ons.multi_grp_coef_ci'
+risk_pred = 'review_ons.multi_grp_pred'
 
 model_suffixes = {
      'static_main': '_zir_only_static_main'

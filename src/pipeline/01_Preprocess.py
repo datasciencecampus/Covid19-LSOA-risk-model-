@@ -46,10 +46,15 @@ dynamic_df = pp.read_data('dynamic', join_col=['LSOA11CD', 'Date'])
 col_list = cf.static_subset
 static_subset_df = static_df[col_list]   
 dynamic_df = dynamic_df.merge(static_subset_df,on=['LSOA11CD'],how='right')
+
+# date filter due to join being changed to outer resulting in extraneous rows prior to the pandemic
+dynamic_df = dynamic_df[dynamic_df['Date'] >= '2020-10-04']
     
 # Filter to England only
 dynamic_df = dynamic_df[dynamic_df.LSOA11CD.str.startswith('E')] 
 dynamic_df = dynamic_df.fillna(0)
+
+dynamic_df['Country'] = 'England'
 
 # Normalise population by a common geography so lag values in following code can be calculated correctly
 # need to rethink these names
@@ -68,15 +73,21 @@ for i in [i for i in dynamic_df_norm.columns.tolist() if (('footfall' in i)|('in
 # normalise dynamic data
 dynamic_df_norm = pp.normalise_data(dynamic_df_norm, 'dynamic_norm')
 
-dynamic_df_norm = pp.ffill_cum(dynamic_df_norm)
+dynamic_df_norm = pp.ffill_cumsum(dynamic_df_norm, cf.ffill_cols['dynamic_norm'])
 
 # normalise the original dynamic df
 dynamic_df = pp.normalise_data(dynamic_df, 'dynamic')
 
-dynamic_df = pp.ffill_cum(dynamic_df, col_suffix='_norm')
+dynamic_df = pp.ffill_cumsum(dynamic_df, cf.ffill_cols['dynamic'])
                        
 # TODO: rename columns (or change subsequent code to use the new ones...)
 # also think of better suffix for these columns
+
+# rename columns to be in line with old code 
+# may want to remove this later
+dynamic_df.drop(columns=cf.dynamic_col_drop, inplace=True)
+dynamic_df.rename(columns=cf.dynamic_rename, inplace=True)
+
 
 dynamic_df.to_gbq(cf.dynamic_data_file, project_id=cf.project_name, if_exists='replace')
 dynamic_df_norm.to_gbq(cf.dynamic_data_file_normalised, project_id=cf.project_name, if_exists='replace')
@@ -84,7 +95,14 @@ dynamic_df_norm.to_gbq(cf.dynamic_data_file_normalised, project_id=cf.project_na
 ########################
 # lag section
 
-apply_timelag(dynamic_df, dynamic_df_norm)
+df_final = pp.apply_timelag(dynamic_df, dynamic_df_norm)
+
+# apply_vif_statistic notebook is no longer being used
+# but this still filters the columns in the final output
+
+static_df_vif = static_df.drop(columns=cf.vif_col_drop)
+
+static_df_vif.to_gbq(cf.static_data_file_vif, project_id=cf.project_name, if_exists='replace')
 
 
     
