@@ -94,13 +94,27 @@ class DataFactory:
                 table = conf.dynamic_data_file_normalised
                 query = f"SELECT * FROM `{table}`" #created in create_dynamic, used in apply_timelag
                 return NoProcessing(query)
-            if data_name == 'LSOA_feature_distribution':
-                query="SELECT * FROM `wip.multi_grp_coef_no_zir_only_static_fa_vizpre_quintile`"
+            if data_name == 'tranche_regularised_coefs':
+                query="SELECT * FROM `wip.multi_grp_coef_no_zir_static_dynamic_tranches`"
                 return NoProcessing(query)
-            if data_name == 'coefficients':
-                query="SELECT * FROM `ons-hotspot-prod.wip.multi_grp_coef_no_zir_static_dynamic_tranches`"
+            if data_name == 'tranche_regularised_coefs':
+                query="SELECT * FROM `wip.multi_grp_coef_no_zir_static_dynamic_tranches`"
                 return NoProcessing(query)
-        
+            if data_name == 'tranche_non_reg_std_coefs':
+                query="SELECT * FROM `wip.multi_grp_se_coef_no_zir_static_dynamic_tranches`"
+                return NoProcessing(query)
+            if data_name == 'tranche_non_reg_non_std_coefs':
+                query="SELECT * FROM `wip.multi_grp_non_se_coef_no_zir_static_dynamic_tranches`"
+                return NoProcessing(query)
+            if data_name == 'tranche_residuals':
+                query="SELECT * FROM `wip.multi_grp_pred_no_zir_static_dynamic_tranches`"
+                return NoProcessing(query)
+            if data_name == 'tranche_latest_predictions':
+                query="SELECT * FROM `wip.multi_grp_pred_test_data_no_zir_static_dynamic_tranches`"
+                return NoProcessing(query)
+            if data_name == 'tranche_model_features':
+                query="SELECT * FROM `review_ons.tranche_model_features`"
+                return NoProcessing(query)
             raise Exception('Data Class Not Found')
         except Exception as _e:
             print(_e)
