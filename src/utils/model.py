@@ -20,13 +20,13 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import seaborn as sns
 
-import plotly.offline as py
-py.init_notebook_mode()
-import plotly.graph_objs as go
-import plotly.express as px
+# import plotly.offline as py
+# py.init_notebook_mode()
+# import plotly.graph_objs as go
+# import plotly.express as px
 import pgeocode
 import dash
-from plotly.offline import iplot, init_notebook_mode
+# from plotly.offline import iplot, init_notebook_mode
 
 
 
@@ -665,3 +665,23 @@ def fit_model_one_week_dynamic(df_to_fit,grp_var,which_clustr_grp,alp_regrlsn,pa
     se_coeffs_model=pd.concat(str_se_coeff_all_weeks)
     
     return predictions_lsoa,coeffs_model,se_coeffs_model
+
+
+def split_time_slice(df, t1, t2):
+    """
+    Subset DataFrame 'df' for dates between t1 and t2
+    
+    Arguments:
+    
+    :df: - A Pandas DataFrame
+    :type: - Pandas DataFrame
+    
+    :t1: - Minimum date
+    :type: 
+    
+    :t2: - Maximum date
+    :type: - 
+    """
+    
+    return df[(df['Date']>t1)&(df['Date']<=t2)]
+

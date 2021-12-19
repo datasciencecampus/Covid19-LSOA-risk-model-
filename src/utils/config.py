@@ -292,3 +292,22 @@ model_suffixes = {
 for model in model_suffixes.keys():
     if not zero_infltd_modl:
         model_suffixes[model] = '_no' + model_suffixes[model]
+        
+
+# whether to use linear regression or regression with regularisation for prediction
+linear_rgr_flg=False
+
+# the total number of LSOAs in England 
+lsoa_count = 32844
+
+# number of tranches to model
+n_tranches = 7
+
+# Dates to slit on for the different time tranches
+tranches_uk=['2020-04-26','2020-08-31','2020-11-14','2020-12-31','2021-02-14','2021-04-29','2021-07-15']
+
+# Description of each tranche
+
+#eg. period between '2020-04-26'to '2020-08-31' is of low prevalence and majority of schools closed in that period
+events=['low_prev_no_school','high_prev_school_opn','high_prev_school_opn_alph','high_prev_no_school_alph_vaccn',\
+        'low_prev_school_opn_vaccn_dbl','high_prev_school_opn_dlta_vaccn_dbl','lifting_lockdown']
