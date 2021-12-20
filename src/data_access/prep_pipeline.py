@@ -183,7 +183,6 @@ def ffill_cumsum(df, col_list, sort_col='Date', group_col = 'LSOA11CD'):
     
     return df
 
-# TODO run these end to end and confirm it all works!
 def apply_timelag(dynamic_df, dynamic_df_norm):
     '''
     Calculate appropriate time lag values to use and apply to dynamic dataset.

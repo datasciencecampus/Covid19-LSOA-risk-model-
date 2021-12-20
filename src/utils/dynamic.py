@@ -29,19 +29,19 @@ from statsmodels.tsa.stattools import kpss
 
 
 
-import matplotlib.pyplot as plt
-plt.style.use('Solarize_Light2')
-from mpl_toolkits.mplot3d import Axes3D
-import seaborn as sns
-import plotly.offline as py
-py.init_notebook_mode()
-import plotly.graph_objs as go
-import plotly.express as px
+# import matplotlib.pyplot as plt
+# plt.style.use('Solarize_Light2')
+# from mpl_toolkits.mplot3d import Axes3D
+# import seaborn as sns
+# import plotly.offline as py
+# py.init_notebook_mode()
+# import plotly.graph_objs as go
+# import plotly.express as px
 
-#import dash_core_components as dcc
-#import dash_html_components as html
-from plotly.offline import iplot, init_notebook_mode
-from matplotlib.pyplot import figure
+# #import dash_core_components as dcc
+# #import dash_html_components as html
+# from plotly.offline import iplot, init_notebook_mode
+# from matplotlib.pyplot import figure
 
 
 from statsmodels.tsa.stattools import adfuller
@@ -63,6 +63,7 @@ def end_of_week(datm, days=6):
     respective Sunday of the week
     '''
     date_obj = datm
+    
     start_of_week = date_obj - timedelta(days=date_obj.weekday())  # Monday
     en_of_week = start_of_week + timedelta(days=days)  # Sunday
     return  en_of_week.date()
