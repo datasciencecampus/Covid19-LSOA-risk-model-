@@ -48,7 +48,7 @@ df_latest_pred = df_latest_pred[['LSOA11CD','Predicted_cases_test','MSOA11NM']]
 df_features.drop('Date', axis=1, inplace=True)
 
 # Filter the features for the latest tranche for plotting
-df_features = df_features[df_features['tranche_order'] == 7]
+df_features = df_features[df_features['tranche_order'] == cf.n_tranches]
 
 # Drop the column to allow for quintile calculation on all numerical columns
 df_features.drop(['tranche_order','tranche_desc','COVID_Cases_per_unit_area'], axis=1, inplace=True)
@@ -95,9 +95,9 @@ df_features_pivot = df_features_pivot[df_features_pivot['Features'].str.contains
 
 
 # Write to BigQuery
-df_reg_coefs.to_gbq('review_ons.dashboard_tranche_reg_coefs', project_id='ons-hotspot-prod',if_exists='replace')
-df_non_reg_std_coefs.to_gbq('review_ons.dashboard_tranche_non_reg_std_coefs', project_id='ons-hotspot-prod',if_exists='replace')
-df_non_reg_non_std_coefs.to_gbq('review_ons.dashboard_tranche_non_reg_non_std_coefs', project_id='ons-hotspot-prod',if_exists='replace')
-df_pred_residuals.to_gbq('review_ons.dashboard_tranche_residuals', project_id='ons-hotspot-prod',if_exists='replace')
-df_latest_pred.to_gbq('review_ons.dashboard_tranche_latest_preds', project_id='ons-hotspot-prod',if_exists='replace')
-df_features_pivot.to_gbq('review_ons.dashboard_tranche_model_features', project_id='ons-hotspot-prod',if_exists='replace')
+df_reg_coefs.to_gbq('review_ons.dashboard_tranche_reg_coefs', project_id = cf.project_name, if_exists = 'replace')
+df_non_reg_std_coefs.to_gbq('review_ons.dashboard_tranche_non_reg_std_coefs', project_id = cf.project_name, if_exists = 'replace')
+df_non_reg_non_std_coefs.to_gbq('review_ons.dashboard_tranche_non_reg_non_std_coefs', project_id = cf.project_name, if_exists = 'replace')
+df_pred_residuals.to_gbq('review_ons.dashboard_tranche_residuals', project_id = cf.project_name, if_exists = 'replace')
+df_latest_pred.to_gbq('review_ons.dashboard_tranche_latest_preds', project_id = cf.project_name, if_exists = 'replace')
+df_features_pivot.to_gbq('review_ons.dashboard_tranche_model_features', project_id = cf.project_name, if_exists = 'replace')
