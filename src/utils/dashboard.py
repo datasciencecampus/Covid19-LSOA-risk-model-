@@ -10,11 +10,11 @@ def make_quintiles(df):
     """
     Add a quintile score column for each numerical column in DataFrame 'df'
     
-    Parameters
-    -------------
+    :param df: A dataframe
+    :type df: Pandas DataFrame
     
-    :df: A dataframe
-    :type: Pandas DataFrame
+    :return: DataFrame with extra columns containing quintile information
+    :rtype: Pandas DataFrame
     """
     
     df_quint = df.copy()
@@ -34,14 +34,14 @@ def encode_column(df, colname):
     """
     Create a new column of encodings for a categorical column given as 'colname' in DataFrame 'df'
     
-    Parameters
-    -------------
+    :param df: A dataframe
+    :type df: Pandas DataFrame
     
-    :df: A dataframe
-    :type: Pandas DataFrame
+    :param colname: Name of a column in DataFrame 'df'
+    :type colname: string
     
-    :colname: Name of a column in DataFrame 'df'
-    :type: str
+    :return: DataFrame with the specific column encoded
+    :rtype: Pandas DataFRame
     """
     
     df_encode = df.copy()
@@ -59,11 +59,11 @@ def pivot_results(df):
     """
     Pivot DataFrame 'df' into long format for easier plotting in Data Studio
     
-    Parameters
-    -------------
+    :param df: A dataframe
+    :type df: Pandas DataFrame
     
-    :df: A dataframe
-    :type: Pandas DataFrame
+    :return: DataFrame pivoted into long format
+    :rtype: Pandas DataFrame
     """
     
     # columns to stay the same
@@ -88,18 +88,17 @@ def pretty_rename(df, colname, lookup):
     The names in column 'colname' that appear as keys in a dictionary called 'lookup' 
     are replaced with the values in the dictionary
     
-        
-    Parameters
-    -------------
+    :param df: A dataframe
+    :type df: Pandas DataFrame
     
-    :df: A dataframe
-    :type: Pandas DataFrame
+    :param colname: Name of a column in DataFrame 'df'
+    :type colname: string
     
-    :colname: Name of a column in DataFrame 'df'
-    :type: str
+    :param lookup: A dictionary of key:value pairs that map value names to pretty names
+    :type lookup: dictionary
     
-    :lookup: A dictionary of key:value pairs that map value names to pretty names
-    :type: Pandas DataFrame
+    :return: A DataFrame with values replaced according to the specified lookup dictionary
+    :rtype: Pandas DataFrame
     
     """
     
