@@ -68,7 +68,7 @@ class AggregatedTestsLSOA(IData):
         cases_df_cumsum=cases_df_cumsum.groupby(["LSOA11CD",'Date']).sum().groupby(level=0).cumsum().reset_index()
         cases_df_cumsum=cases_df_cumsum.rename(columns={'COVID_Cases':'cases_cumsum'})[['LSOA11CD','Date','cases_cumsum']]
         cases_df=cases_df.merge(cases_df_cumsum, how='left', on=['LSOA11CD', 'Date'])
-        cases_df['Date']=cases_df['Date'].swifter.apply(lambda x: dyn.end_of_week(x))
+        cases_df['Date']=cases_df['Date'].apply(lambda x: dyn.end_of_week(x))
         cases_df=cases_df.groupby(['Date','LSOA11CD']).agg(({'COVID_Cases':'sum', 'cases_cumsum':'max'})).reset_index()
         cases_df['Date']=pd.to_datetime(cases_df['Date'])
 

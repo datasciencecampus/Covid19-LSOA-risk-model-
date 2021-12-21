@@ -206,3 +206,8 @@ def sklearn_vif(exogs, data):
     df_vif = pd.DataFrame({'VIF': vif_dict, 'Tolerance': tolerance_dict})
 
     return df_vif
+
+
+def split_time_slice(df,t1,t2):
+    
+    return df[(df['Date']>t1)&(df['Date']<=t2)]

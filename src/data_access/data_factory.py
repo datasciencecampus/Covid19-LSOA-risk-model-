@@ -94,7 +94,9 @@ class DataFactory:
                 table = conf.dynamic_data_file_normalised
                 query = f"SELECT * FROM `{table}`" #created in create_dynamic, used in apply_timelag
                 return NoProcessing(query)
-            
+            if data_name == 'post_idbr_check':
+                query="SELECT * FROM `wip.post_idbr_check`"
+                return NoProcessing(query)
             raise Exception('Data Class Not Found')
         except Exception as _e:
             print(_e)
