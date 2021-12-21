@@ -34,6 +34,11 @@ static_df=static_df[static_df.LSOA11CD.str.startswith('E')] #only keeping Englan
 
 static_df=static_df.fillna(0)  #fill 0s(nans exist in occupations where nobody works in them)
 
+# apply_vif_statistic notebook is no longer being used
+# but this still filters the columns in the final output
+
+static_df.drop(columns=cf.static_col_drop, inplace=True)
+
 # save to wip file
 static_df.to_gbq(cf.static_data_file, project_id=cf.project_name,if_exists='replace')
 
@@ -94,15 +99,9 @@ dynamic_df_norm.to_gbq(cf.dynamic_data_file_normalised, project_id=cf.project_na
 
 ########################
 # lag section
+# writing to gbq is included in the function
 
 df_final = pp.apply_timelag(dynamic_df, dynamic_df_norm)
-
-# apply_vif_statistic notebook is no longer being used
-# but this still filters the columns in the final output
-
-static_df_vif = static_df.drop(columns=cf.vif_col_drop)
-
-static_df_vif.to_gbq(cf.static_data_file_vif, project_id=cf.project_name, if_exists='replace')
 
 
     

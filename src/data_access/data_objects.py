@@ -384,8 +384,10 @@ class AllTranches(IData):
     def __init__(self):
         self.name = "data"
     def create_dataframe(self):
+        
+        table = cf.static_data_file
     
-        query_static = "SELECT * FROM `wip.risk_model_static_variables_main`"
+        query_static = f"SELECT * FROM `{tab}`"
         query_job_static = super().client.query(
             query_static
         ) 

@@ -251,7 +251,7 @@ dynamic_rename = {
  ,'total_vaccinated_second_dose_pop_norm': 'total_vaccinated_second_dose'}
 
 # columns dropped in VIF statistic notebook
-vif_col_drop = ['BAME_PROP',
+static_col_drop = ['BAME_PROP',
  'STUDENT_LIVING_IN_A_COMMUNAL_ESTABLISHMENT_TOTAL',
  'COMMUNAL_ESTABLISHMENT_MEDICAL_AND_CARE_TOTAL',
  'CENSUS_2011_BLACK_AFRICAN_CARIBBEAN_BLACK_BRITISH',
@@ -290,14 +290,12 @@ data_location_big_query['mobility_DEIMOS'] = "ons-hotspot-prod.wip.people_counts
 # file names
 project_name = 'ons-hotspot-prod'
 
-static_data_file = 'review_ons.static_lsoa_variables'
+static_data_file = 'review_ons.risk_model_static_variables_main'
 dynamic_data_file = 'review_ons.dynamic_lsoa_variables'
 dynamic_data_file_normalised = 'review_ons.dynamic_lsoa_variables_raw_norm_chsn_lag'
 
 lagged_dynamic_stationary = 'review_ons.time_lagged_dynamic_data_deimos_cumsum_stationary_main'
 lagged_dynamic_non_stationary = 'review_ons.time_lagged_dynamic_data_deimos_cumsum_non_stationary_main'
-
-static_data_file_vif = 'review_ons.risk_model_static_variables_main'
 
 # zero-inflated model training
 zero_infltd_modl=False

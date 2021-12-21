@@ -1,54 +1,12 @@
 # Import Packages
 import os
 import sys
-import string
-from datetime import date, datetime, timedelta
-import time
-import random
-from random import randint
-import math
 from functools import reduce
 
 import pandas as pd
 import numpy as np
-from numpy.random import seed, randn
 import pandas_gbq
 import geopandas as gpd
-
-from google.cloud import bigquery
-
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-import seaborn as sns
-
-import plotly.offline as py
-import plotly.graph_objs as go
-import plotly.express as px
-import dash
-from plotly.offline import iplot, init_notebook_mode
-
-import swifter
-import pgeocode
-
-from scipy import stats
-from scipy.stats import pearsonr
-from scipy.signal import argrelextrema
-
-from sklearn.model_selection import GridSearchCV, train_test_split, RandomizedSearchCV
-from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import (LogisticRegression
-                                 ,Lasso
-                                 ,ElasticNet
-                                 ,LinearRegression)
-from sklearn.metrics import median_absolute_error, r2_score, mean_squared_error
-
-from sklego.meta import ZeroInflatedRegressor, EstimatorTransformer
-
-from statsmodels.stats.outliers_influence import variance_inflation_factor
-from statsmodels.tools.eval_measures import rmse, aic
-from statsmodels.tsa.stattools import grangercausalitytests, adfuller, kpss
-from statsmodels.tsa.seasonal import seasonal_decompose
-from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 
 # Import from local data files
 current_path = os.path.abspath('.')
@@ -213,13 +171,13 @@ def apply_timelag(dynamic_df, dynamic_df_norm):
     lag_values_mobility={}
 
     for c in cf.mobility_cols_to_lag:
-        lag_values_mobility[f'{c}']=tl.get_time_lag_value(dynamic_df_norm_split, 
-                                                          'COVID_Cases_norm_lag_area',
-                                                          'total_vaccinated_first_dose_norm_lag_pop',
-                                                           c, 
-                                                          lag_granularity,
-                                                          0,
-                                                          '2020-01-01',
+        lag_values_mobility[f'{c}']=tl.get_time_lag_value(dfs = dynamic_df_norm_split, 
+                                                          trgt = 'COVID_Cases_norm_lag_area',
+                                                          vacc = 'total_vaccinated_first_dose_norm_lag_pop',
+                                                          mobility = c, 
+                                                          region = lag_granularity,
+                                                          window_days = 0,
+                                                          start_date = '2020-01-01',
                                                           n_lag=12, 
                                                           plt_flg=True, 
                                                           moblty_flag=True)
@@ -228,13 +186,13 @@ def apply_timelag(dynamic_df, dynamic_df_norm):
     # currently empty because cf.vacc_cols_to_lag is empty
     lag_values_vacc={}
     for c in cf.vacc_cols_to_lag:
-        lag_values_vacc[f'{c}']=tl.get_time_lag_value(dynamic_df_norm_split, 
-                                                      'COVID_Cases_norm_lag_area',
-                                                      c,
-                                                       'worker_visitor_footfall_sqkm', 
-                                                      lag_granularity,
-                                                      30, 
-                                                      '2020-01-01',
+        lag_values_vacc[f'{c}']=tl.get_time_lag_value(dfs = dynamic_df_norm_split, 
+                                                      trgt = 'COVID_Cases_norm_lag_area',
+                                                      vacc = c,
+                                                      mobility = 'worker_visitor_footfall_sqkm', 
+                                                      region = lag_granularity,
+                                                      window_days = 30, 
+                                                      start_date = '2020-01-01',
                                                       n_lag=12, 
                                                       plt_flg=True,
                                                       moblty_flag=False)
