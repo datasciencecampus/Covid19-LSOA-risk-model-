@@ -93,28 +93,31 @@ class DataFactory:
             if data_name == 'dynamic_raw_norm_chosen_geo':
                 table = conf.dynamic_data_file_normalised
                 query = f"SELECT * FROM `{table}`" #created in create_dynamic, used in apply_timelag
-                return NoProcessing(query)
+                return NoProcessing(query)      
             if data_name == 'tranche_regularised_coefs':
-                query="SELECT * FROM `wip.multi_grp_coef_no_zir_static_dynamic_tranches`"
-                return NoProcessing(query)
-            if data_name == 'tranche_regularised_coefs':
-                query="SELECT * FROM `wip.multi_grp_coef_no_zir_static_dynamic_tranches`"
+                table = conf.tranche_regularised_coefs_gbq_loc
+                query=f"SELECT * FROM `{table}`"
                 return NoProcessing(query)
             if data_name == 'tranche_non_reg_std_coefs':
-                query="SELECT * FROM `wip.multi_grp_se_coef_no_zir_static_dynamic_tranches`"
+                table = conf.tranche_non_reg_std_coefs_gbq_loc
+                query = f"SELECT * FROM `{table}`"
                 return NoProcessing(query)
             if data_name == 'tranche_non_reg_non_std_coefs':
-                query="SELECT * FROM `wip.multi_grp_non_se_coef_no_zir_static_dynamic_tranches`"
-                return NoProcessing(query)
+                table = conf.tranche_non_reg_non_std_coefs_gbq_loc
+                query = f"SELECT * FROM `{table}`"
+                return NoProcessing(query)  
             if data_name == 'tranche_residuals':
-                query="SELECT * FROM `wip.multi_grp_pred_no_zir_static_dynamic_tranches`"
-                return NoProcessing(query)
+                table == conf.tranche_residuals_gbq_loc
+                query = f"SELECT * FROM `{table}`"
+                return NoProcessing(query)  
             if data_name == 'tranche_latest_predictions':
-                query="SELECT * FROM `wip.multi_grp_pred_test_data_no_zir_static_dynamic_tranches`"
-                return NoProcessing(query)
+                table = conf.tranche_latest_predictions_gbq_loc
+                query = f"SELECT * FROM `{table}`"
+                return NoProcessing(query)      
             if data_name == 'tranche_model_features':
-                query="SELECT * FROM `review_ons.tranche_model_features`"
-                return NoProcessing(query)
+                table = conf.tranche_model_features_gbq_loc
+                query = f"SELECT * FROM `{table}`"
+                return NoProcessing(query)      
             raise Exception('Data Class Not Found')
         except Exception as _e:
             print(_e)
