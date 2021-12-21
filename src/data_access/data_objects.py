@@ -68,7 +68,8 @@ class AggregatedTestsLSOA(IData):
         cases_df_cumsum=cases_df_cumsum.groupby(["LSOA11CD",'Date']).sum().groupby(level=0).cumsum().reset_index()
         cases_df_cumsum=cases_df_cumsum.rename(columns={'COVID_Cases':'cases_cumsum'})[['LSOA11CD','Date','cases_cumsum']]
         cases_df=cases_df.merge(cases_df_cumsum, how='left', on=['LSOA11CD', 'Date'])
-        cases_df['Date']=cases_df['Date'].swifter.apply(lambda x: dyn.end_of_week(x))
+        
+        cases_df['Date']=cases_df['Date'].apply(lambda x: dyn.end_of_week(x))
         cases_df=cases_df.groupby(['Date','LSOA11CD']).agg(({'COVID_Cases':'sum', 'cases_cumsum':'max'})).reset_index()
         cases_df['Date']=pd.to_datetime(cases_df['Date'])
 
@@ -150,7 +151,7 @@ class FlowsMarsData(IData):
         [['lsoa_inflow_volume']].sum().reset_index()
 
         # WEEKLY SAMPLING
-        df_flows_mars_data['Date']=df_flows_mars_data['Date'].swifter.apply(lambda x: dyn.end_of_week(x))
+        df_flows_mars_data['Date']=df_flows_mars_data['Date'].apply(lambda x: dyn.end_of_week(x))
 
         df_flows_mars_data=df_flows_mars_data.groupby(['Date', 'LSOA11CD'])[['lsoa_inflow_volume']].sum().reset_index()
         
@@ -248,7 +249,7 @@ class LSOADailyFootfall(IData):
                              'lsoa_people_perhactares':'lsoa_people_perHactares'})
     
         df['Date'] = pd.to_datetime(df['Date'])
-        df['Date']=df['Date'].swifter.apply(lambda x: dyn.end_of_week(x)) #TOC: Changed to the swifter mehod as offset shifts days in to different weeks
+        df['Date']=df['Date'].apply(lambda x: dyn.end_of_week(x)) #TOC: Changed to the swifter mehod as offset shifts days in to different weeks
         #df['Date'] = df['Date'] + pd.offsets.Week(weekday=6) TOC: Changed to the swifter mehod as offset shifts days in to different weeks
         df['worker_footfall_sqkm']=0
         df['visitor_footfall_sqkm']=0
@@ -336,7 +337,7 @@ class LSOAVaccinations(IData):
         sum().reset_index()
 
         #  WEEKLY SAMPLING
-        vaccination_df['Date']=vaccination_df['Date'].swifter.apply(lambda x: dyn.end_of_week(x))
+        vaccination_df['Date']=vaccination_df['Date'].apply(lambda x: dyn.end_of_week(x))
 
         vaccination_df=vaccination_df.groupby(['Date','LSOA11CD']).agg(({'total_vaccinated_first_dose':'sum',
                                                                          'total_vaccinated_second_dose':'sum',
@@ -383,8 +384,10 @@ class AllTranches(IData):
     def __init__(self):
         self.name = "data"
     def create_dataframe(self):
+        
+        table = cf.static_data_file
     
-        query_static = "SELECT * FROM `wip.risk_model_static_variables_main`"
+        query_static = f"SELECT * FROM `{tab}`"
         query_job_static = super().client.query(
             query_static
         ) 
@@ -789,7 +792,7 @@ class DeimosEndTrip(IData):
         
         trip_end_count_lsoa_daily['Date'] = pd.to_datetime(trip_end_count_lsoa_daily['Date'])
         
-        trip_end_count_lsoa_daily['Date']=trip_end_count_lsoa_daily['Date'].swifter.apply(lambda x: dyn.end_of_week(x)) 
+        trip_end_count_lsoa_daily['Date']=trip_end_count_lsoa_daily['Date'].apply(lambda x: dyn.end_of_week(x)) 
         
         trip_end_count_lsoa_daily.loc[trip_end_count_lsoa_daily['journey_purpose']=='Commute', 'commute_inflow_sqkm']=trip_end_count_lsoa_daily[trip_end_count_lsoa_daily['journey_purpose']=='Commute'].lsoa_inflow_volume_perHactares.div(0.01)
         
