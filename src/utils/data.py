@@ -58,7 +58,7 @@ def get_ethnicities_list(df,subgroups):
     df: pandas dataframe
     subgroups: bool, if true only granular ethnic groups extracted from ratio
     """
-    ethnicities = conf.features_dict['umbrella_ethnicity']
+    ethnicities = conf.features_dict['umbrella_ethnicity']['columns']
     
     #ask question here, is it meant to be this or subgroups if true?
     

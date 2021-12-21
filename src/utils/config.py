@@ -215,7 +215,7 @@ features_dict['dynamic_area_norm'] = {
 features_dict['dynamic_pop'] = {
      'flag': 'dynamic'
     ,'by': 'ALL_PEOPLE'
-    ,'suffix': '_norm2'
+    ,'suffix': '_pop_norm'
     ,'columns': ['total_vaccinated_first_dose','total_vaccinated_second_dose', 'full_vacc_cumsum',
                 'COVID_Cases', 'cases_cumsum']
 }
@@ -223,12 +223,57 @@ features_dict['dynamic_pop'] = {
 features_dict['dynamic_area'] = {
      'flag': 'dynamic'
     ,'by': 'Area'
-    ,'suffix': '_norm2'
+    ,'suffix': '_area_norm'
     ,'columns': ['COVID_Cases', 'cases_cumsum']
 }
 
+# listing which columns need to be forward filled for dynamic data processing
+# these are cumulative sums which have been done over incomplete data
+# therefore at the end of processing will have NaNs where the original data had no entry
+# the forward fill deals with this issue
+ffill_cols = {}
 
+ffill_cols['dynamic_norm'] = ['cases_cumsum_norm_lag_pop', 'full_vacc_cumsum_norm_lag_pop', 'cases_cumsum_norm_lag_area']
 
+ffill_cols['dynamic'] = ['cases_cumsum_pop_norm', 'full_vacc_cumsum_pop_norm', 'cases_cumsum_area_norm']
+
+# drop columns which were replaced in the original dynamic preprocessing script
+dynamic_col_drop = ['COVID_Cases', 'total_vaccinated_first_dose','total_vaccinated_second_dose']
+
+# rename new columns in dynamic data preprocessing to match original column names
+dynamic_rename = {
+ 'COVID_Cases_area_norm': 'COVID_Cases'
+ ,'COVID_Cases_pop_norm': 'cases_per_person'
+ ,'cases_cumsum_area_norm': 'cumsum_divided_area'
+ ,'cases_cumsum_pop_norm': 'pct_infected_all_time'
+ ,'full_vacc_cumsum_pop_norm': 'pct_of_people_full_vaccinated'
+ ,'total_vaccinated_first_dose_pop_norm': 'total_vaccinated_first_dose'
+ ,'total_vaccinated_second_dose_pop_norm': 'total_vaccinated_second_dose'}
+
+# columns dropped in VIF statistic notebook
+static_col_drop = ['BAME_PROP',
+ 'STUDENT_LIVING_IN_A_COMMUNAL_ESTABLISHMENT_TOTAL',
+ 'COMMUNAL_ESTABLISHMENT_MEDICAL_AND_CARE_TOTAL',
+ 'CENSUS_2011_BLACK_AFRICAN_CARIBBEAN_BLACK_BRITISH',
+ 'HEALTH_AGE_50_to_64_BAD_HEALTH',
+ 'HEALTH_AGE_75_PLUS_BAD_HEALTH',
+ 'HEALTH_AGE_50_to_64_GOOD_FAIR_HEALTH',
+ 'METHOD_OF_TRAVEL_TO_WORK_PRIVATE_TRANSPORT',
+ 'IMD_SCORE',
+ 'HEALTH_AGE_UNDER_50_GOOD_FAIR_HEALTH',
+ 'HEALTH_AGE_65_to_74_BAD_HEALTH',
+ 'ALL_PEOPLE',
+ 'LSOA11NMW',
+ 'Area',
+ 'NO_UNPAID_CARE',
+ 'HEALTH_AGE_75_PLUS_GOOD_FAIR_HEALTH',
+ 'HOUSEHOLD_SIZE_1_PERSON_IN_HOUSEHOLD',
+ 'IMD_EMPLOYMENT_SCORE',
+ 'age_18_to_29',
+ 'HEALTH_AGE_65_to_74_GOOD_FAIR_HEALTH',
+ 'HEALTH_AGE_UNDER_50_BAD_HEALTH',
+ 'geometry',
+ 'FAMILIES_WITH_DEPENDENT_CHILDREN_ALL_FAMILIES']
 
 # User inputs the location of data they wish to use 
 
@@ -245,13 +290,12 @@ data_location_big_query['mobility_DEIMOS'] = "ons-hotspot-prod.wip.people_counts
 # file names
 project_name = 'ons-hotspot-prod'
 
-static_data_file = 'wip.static_lsoa_variables'
-dynamic_data_file = 'wip.dynamic_lsoa_variables'
-dynamic_data_file_normalised = 'wip.dynamic_lsoa_variables_raw_norm_chsn_lag'
+static_data_file = 'review_ons.risk_model_static_variables_main'
+dynamic_data_file = 'review_ons.dynamic_lsoa_variables'
+dynamic_data_file_normalised = 'review_ons.dynamic_lsoa_variables_raw_norm_chsn_lag'
 
-lagged_dynamic_stationary = 'wip.time_lagged_dynamic_data_deimos_cumsum_stationary_main'
-lagged_dynamic_non_stationary = 'wip.time_lagged_dynamic_data_deimos_cumsum_non_stationary_main'
-
+lagged_dynamic_stationary = 'review_ons.time_lagged_dynamic_data_deimos_cumsum_stationary_main'
+lagged_dynamic_non_stationary = 'review_ons.time_lagged_dynamic_data_deimos_cumsum_non_stationary_main'
 
 # zero-inflated model training
 zero_infltd_modl=False
@@ -279,9 +323,9 @@ dynamic_mobility=['worker_visitor_footfall_sqkm','resident_footfall_sqkm','commu
 
 # GCP dataset prefix for static and dynamic risk model outputs
 # suffix will change for static/dynamic and whether zero inflation is applied
-risk_coef = 'wip.multi_grp_coef'
-risk_coef_ci = 'wip.multi_grp_coef_ci'
-risk_pred = 'wip.multi_grp_pred'
+risk_coef = 'review_ons.multi_grp_coef'
+risk_coef_ci = 'review_ons.multi_grp_coef_ci'
+risk_pred = 'review_ons.multi_grp_pred'
 
 model_suffixes = {
      'static_main': '_zir_only_static_main'
@@ -294,6 +338,80 @@ for model in model_suffixes.keys():
         model_suffixes[model] = '_no' + model_suffixes[model]
         
         
+## Pretty feature names for dashboard
+feature_pretty_names = {
+                       # processed features (factor scores and normalised values) 
+                       'IMD_INCOME_SCORE':'IMD Income Score',
+                       'imd_income_score':'IMD Income Score',
+                       'METHOD_OF_TRAVEL_TO_WORK_Public_TRANSPORT':'Commute Method - Public Transport',
+                       'method_of_travel_to_work_public_transport':'Commute Method - Public Transport',
+                       'METHOD_OF_TRAVEL_TO_WORK_WORK_MAINLY_FROM_HOME':'Commute Method - Work From Home',
+                       'method_of_travel_to_work_work_mainly_from_home':'Commute Method - Work From Home',
+                       'STUDENT_LIVING_WITH_PARENTS':'Student Living With Parents',
+                       'student_living_with_parents':'Student Living With Parents',
+                       'care_homes_and_workers':'Care Home and Workers',
+                       'high_risk_industry_workers':'High Risk Industry Workers',
+                       'middle_age_groups_medium_hh':'Middle Age Groups Medium HH Size',
+                       'non_white_pop_larger_hh':'Non White Population, Larger HH Size',
+                       'older_pop_smaller_hh':'Older Population, Smaller HH Size',
+                       'smaller_hh_no_children':'Smaller HH Size, No Children',
+                    
+                        # simpler model features
+                       'census_2011_asian_asian_british':'Asian/Asian British',
+                       'CENSUS_2011_ASIAN_ASIAN_BRITISH':'Asian/Asian British',
+                       'method_of_travel_to_work_non_motorised':'Commute Method - Non Motorised',
+                       'METHOD_OF_TRAVEL_TO_WORK_NON_MOTORISED':'Commute Method - Non Motorised',
+                       'families_with_dependent_children_no_dependent_children':'No Dependent Children',
+                       'FAMILIES_WITH_DEPENDENT_CHILDREN_NO_DEPENDENT_CHILDREN':'No Dependent Children',
+                       'care_homes_warehousing_textiles':'Care, Warehouse, Textiles Workers',
+                       'meat_and_fish_processing':'Meat & Fish Processing Workers',
+                       'ready_meals':'Ready Meals Workers',
+                       'worker_visitor_footfall_sqm':'Worker Visitor Footfall',
+    
+                        # quintiles
+                       'IMD_INCOME_SCORE_quint':'IMD Income Score Quintile',
+                       'METHOD_OF_TRAVEL_TO_WORK_Public_TRANSPORT_quint':'Commute Method - Public Transport Quintile',
+                       'METHOD_OF_TRAVEL_TO_WORK_WORK_MAINLY_FROM_HOME_quint':'Commute Method - Work From Home Quintile',
+                       'STUDENT_LIVING_WITH_PARENTS_quint':'Student Living With Parents Quintile',
+                       'care_homes_and_workers_quint':'Care Home and Workers Quintile',
+                       'high_risk_industry_workers_quint':'High Risk Industry Workers Quintile',
+                       'middle_age_groups_medium_hh_quint':'Middle Age Groups Medium HH Size Quintile',
+                       'non_white_pop_larger_hh_quint':'Non White Population, Larger HH Size Quintile',
+                       'older_pop_smaller_hh_quint':'Older Population, Smaller HH Size Quintile',
+                       'smaller_hh_no_children_quint':'Smaller HH Size, No Children Quintile',
+                       'CENSUS_2011_ASIAN_ASIAN_BRITISH_quint':'Asian/Asian British Quintile',
+                       'FAMILIES_WITH_DEPENDENT_CHILDREN_NO_DEPENDENT_CHILDREN_quint':'No Dependent Children Quintile',
+                       'METHOD_OF_TRAVEL_TO_WORK_NON_MOTORISED_quint':'Commute Method - Non Motorised Quintile',
+                       'meat_and_fish_processing_quint':'Meat & Fish Processing Workers Quintile',
+                       'care_homes_warehousing_textiles_quint':'Care, Warehouse, Textiles Workers Quintile',
+                       'worker_visitor_footfall_sqm_quint':'Worker Visitor Footfall Quintile',
+                        
+                        # ready meals rank
+                       'ready_meals_rank':'Ready Meals Workers Rank'
+                         }
+
+# Travel cluster pretty names for dashboard
+tc_pretty_names = {'L1. >70% metropolitan core dwellers':' >70% Metropilitan Core Dwellers',
+                  'L2. >70% outer metropolitan dwellers':'>70% Outer Metropolitan Core Dwellers',
+                  'L3. >70% suburban dwellers':'>70% Suburban Dwellers',
+                  'L4. >70% exurban dwellers':'>70% Exurban Dwellers',
+                  'L5. >70% rural dwellers':'>70% Rural Dwellers'}
+
+# Travel cluster short names for dashboard
+tc_short_names = {'L1. >70% metropolitan core dwellers':'Metro Core',
+                  'L2. >70% outer metropolitan dwellers':'Outer Metro',
+                  'L3. >70% suburban dwellers':'Suburban',
+                  'L4. >70% exurban dwellers':'Exurban',
+                  'L5. >70% rural dwellers':'Rural'}
+
+
+# BigQuery table locations    
+tranche_regularised_coefs_gbq_loc = 'wip.multi_grp_coef_no_zir_static_dynamic_tranches'
+tranche_non_reg_stf_coefs_gbq_loc = 'wip.multi_grp_se_coef_no_zir_static_dynamic_tranches'
+tranche_non_reg_non_std_coefs_gbq_loc = 'wip.multi_grp_non_se_coef_no_zir_static_dynamic_tranches'
+tranche_residuals_gbq_loc = 'wip.multi_grp_pred_no_zir_static_dynamic_tranches'
+tranche_latest_predictions_gbq_loc = 'wip.multi_grp_pred_test_data_no_zir_static_dynamic_tranches'
+tranche_model_features_gbq_loc = 'review_ons.tranche_model_features'
 
 # whether to use linear regression or regression with regularisation for prediction
 linear_rgr_flg=False

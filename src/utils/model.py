@@ -20,13 +20,13 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import seaborn as sns
 
-import plotly.offline as py
-py.init_notebook_mode()
-import plotly.graph_objs as go
-import plotly.express as px
-import pgeocode
+# import plotly.offline as py
+# py.init_notebook_mode()
+# import plotly.graph_objs as go
+# import plotly.express as px
+# import pgeocode
 import dash
-from plotly.offline import iplot, init_notebook_mode
+# from plotly.offline import iplot, init_notebook_mode
 
 
 

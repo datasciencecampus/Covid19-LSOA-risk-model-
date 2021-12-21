@@ -3,6 +3,7 @@
 .pyre_configuration
 Pipfile
 Pipfile.lock
+LSOA_2011
 
 
 # named directories
@@ -11,6 +12,7 @@ __pycache__
 .pyre
 .couscous
 .hypothesis
+.ipynb_checkpoints
 
 
 # wildcards
@@ -20,3 +22,4 @@ models/*.vec
 data/*
 .mypy*
 output/*
+*.ipynb_checkpoints
