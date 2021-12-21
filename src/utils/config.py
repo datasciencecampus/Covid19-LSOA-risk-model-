@@ -361,7 +361,13 @@ tc_short_names = {'L1. >70% metropolitan core dwellers':'Metro Core',
                   'L5. >70% rural dwellers':'Rural'}
 
 
+# BigQuery table locations    
+tranche_regularised_coefs_gbq_loc = 'wip.multi_grp_coef_no_zir_static_dynamic_tranches'
+tranche_non_reg_stf_coefs_gbq_loc = 'wip.multi_grp_se_coef_no_zir_static_dynamic_tranches'
+tranche_non_reg_non_std_coefs_gbq_loc = 'wip.multi_grp_non_se_coef_no_zir_static_dynamic_tranches'
+tranche_residuals_gbq_loc = 'wip.multi_grp_pred_no_zir_static_dynamic_tranches'
+tranche_latest_predictions_gbq_loc = 'wip.multi_grp_pred_test_data_no_zir_static_dynamic_tranches'
+tranche_model_features_gbq_loc = 'review_ons.tranche_model_features'
 
-
-
-
+# Define the number of tranchess
+n_tranches = 7
