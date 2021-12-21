@@ -12,7 +12,7 @@ geography_dict = {'region':'RGN19NM',
               'country':'Country'} #config for the geogaphy to calculate time lag.
 
 chosen_granularity_for_lag = geography_dict['travel_cluster']#pick which lag you want to use for caclulating dynamic time lag 
-granularity_for_modelling = geography_dict['country']
+granularity_for_modelling = geography_dict['country'] # This can also be chosen as 'travel_cluster'
 explore_stationarity_check = False
 
 # columns of static data subset for geography
