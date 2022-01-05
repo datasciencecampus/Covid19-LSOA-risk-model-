@@ -16,52 +16,13 @@
 # Import Packages
 import os
 import sys
-from datetime import date
-from datetime import datetime
-import random
-from random import randint
 import math
-from functools import reduce
 
 from google.cloud import bigquery
 
 import pandas as pd
 import numpy as np
 import pandas_gbq
-from numpy.random import seed
-from numpy.random import randn
-
-import matplotlib.pyplot as plt, figure
-from mpl_toolkits.mplot3d import Axes3D
-import seaborn as sns
-
-import plotly.offline as py
-py.init_notebook_mode()
-import plotly.graph_objs as go
-import plotly.express as px
-import pgeocode
-import dash
-from plotly.offline import iplot, init_notebook_mode
-
-from scipy import stats
-from scipy.stats import pearsonr
-from scipy.stats import pearsonr
-from sklearn.model_selection import GridSearchCV, train_test_split, RandomizedSearchCV
-
-from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LogisticRegression
-from sklearn.linear_model import Lasso
-from sklearn.linear_model import ElasticNet
-from sklearn.linear_model import LinearRegression
-
-from sklego.meta import ZeroInflatedRegressor
-from sklego.meta import EstimatorTransformer
-
-from sklearn.metrics import median_absolute_error, r2_score
-from sklearn.metrics import mean_squared_error
-from statsmodels.stats.outliers_influence import variance_inflation_factor
-from statsmodels.graphics.gofplots import qqplot
-
 
 # Import from local data files
 current_path = os.path.abspath('.')
@@ -71,8 +32,6 @@ from data_access.data_factory import DataFactory as factory
 from utils import model as md
 from utils import config as cf
 
-# SECTION ONE OF TWO
-# Model static variables
 
 def static_model(alphas_val = cf.alphas_val, 
                  parm_spce_grid_srch = cf.parm_spce_grid_srch,
@@ -98,7 +57,7 @@ def static_model(alphas_val = cf.alphas_val,
     :param save_results: Flag for whether to output results to tables or not. Default True.
     :type: bool
     
-    :return: One dataframe each of the coefficients and confidence intervals of models generated.
+    :return: Two dataframes, one each of the coefficients and confidence intervals of models generated.
     :rtype: Pandas DataFrames
     """
 
@@ -131,7 +90,7 @@ def static_model(alphas_val = cf.alphas_val,
 
     dynamic_lagged_variables_df = factory.get('dynamic_time_lagged').create_dataframe()
     dynamic_features=list(dynamic_lagged_variables_df.select_dtypes(include='number').columns)
-
+    
     list_of_tc=sorted(df_all_tranches_sbset['travel_cluster'].unique())
     # Separate regression model is fit
     # for each travel cluster
@@ -178,11 +137,13 @@ def static_model(alphas_val = cf.alphas_val,
     str_coef_tc_static_ci.rename(columns={'mean':'Coefficients'},inplace=True)
 
     dataset_suffix = cf.model_suffixes['static_main']
-
-    str_coef_tc_static.to_gbq(cf.risk_coef + dataset_suffix, project_id=project_name, if_exists='replace')
-    str_coef_tc_static_ci.to_gbq(cf.risk_coef_ci + dataset_suffix, project_id=project_name, if_exists='replace')
-    str_pred_tc_static.to_gbq(cf.risk_pred + dataset_suffix, project_id=project_name, if_exists='replace')
     
+    if save_results:
+
+        str_coef_tc_static.to_gbq(cf.risk_coef + dataset_suffix, project_id=project_name, if_exists='replace')
+        str_coef_tc_static_ci.to_gbq(cf.risk_coef_ci + dataset_suffix, project_id=project_name, if_exists='replace')
+        str_pred_tc_static.to_gbq(cf.risk_pred + dataset_suffix, project_id=project_name, if_exists='replace')
+
     return str_coef_tc_static, str_coef_tc_static_ci
 
 # SECTION TWO OF TWO
@@ -222,7 +183,8 @@ def dynamic_model(str_coef_tc_static,
     :param save_results: Flag for whether to output results to tables or not. Default True.
     :type: bool
 
-    :return: None
+    :return: Two dataframes, one each of the coefficients and confidence intervals of models generated.
+    :rtype: Pandas DataFrames
     """
     
     # This function reads in the results of static_model and performs some pre-processing 
@@ -306,11 +268,12 @@ def dynamic_model(str_coef_tc_static,
     plot(kind='barh')
 
     dataset_suffix = cf.model_suffixes['dynamic']
+    
+    if save_results:
 
-    str_coef_tc_dynamic.to_gbq(cf.risk_coef + dataset_suffix, project_id=project_name, if_exists='replace')
-    str_coef_tc_dynamic_ci.to_gbq(cf.risk_coef_ci+ dataset_suffix, project_id=project_name,if_exists='replace')
-    str_pred_tc_dynamic.to_gbq(cf.risk_pred+ dataset_suffix, project_id=project_name,if_exists='replace')
-
+        str_coef_tc_dynamic.to_gbq(cf.risk_coef + dataset_suffix, project_id=project_name, if_exists='replace')
+        str_coef_tc_dynamic_ci.to_gbq(cf.risk_coef_ci+ dataset_suffix, project_id=project_name,if_exists='replace')
+        str_pred_tc_dynamic.to_gbq(cf.risk_pred+ dataset_suffix, project_id=project_name,if_exists='replace')
 
     risk_predictors_df=pd.concat([str_coef_tc_static,str_coef_tc_dynamic])
 
@@ -320,12 +283,14 @@ def dynamic_model(str_coef_tc_static,
 
     risk_predictors_df_ci=risk_predictors_df_ci[['Features','travel_cluster','Coefficients','std','ci95']]
 
-    dataset_suffix = cf.model_suffixes['static_dynamic']    
-
-    risk_predictors_df.to_gbq(cf.risk_coef+dataset_suffix, project_id=project_name, if_exists='replace')
-    risk_predictors_df_ci.to_gbq(cf.risk_coef_ci+dataset_suffix, project_id=project_name, if_exists='replace')
+    dataset_suffix = cf.model_suffixes['static_dynamic']
     
-    return None
+    if save_results:
+
+        risk_predictors_df.to_gbq(cf.risk_coef+dataset_suffix, project_id=project_name, if_exists='replace')
+        risk_predictors_df_ci.to_gbq(cf.risk_coef_ci+dataset_suffix, project_id=project_name, if_exists='replace')
+
+    return str_coef_tc_dynamic, str_coef_tc_dynamic_ci
 
 
 

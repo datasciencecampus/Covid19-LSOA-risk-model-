@@ -280,7 +280,7 @@ def fit_model_one_week_static(df_to_fit,grp_var,zero_inf_flg,dynamic_ftrs,alp_re
         
         
         clf = LogisticRegression(random_state=1,max_iter=10000)
-        rgr=ElasticNet()
+        rgr=ElasticNet(random_state=1)
         #rgr=LinearRegression()
         
         
@@ -300,7 +300,7 @@ def fit_model_one_week_static(df_to_fit,grp_var,zero_inf_flg,dynamic_ftrs,alp_re
                                  'class_weight': [{0:x, 1:1.0-x} for x in np.linspace(0.0,0.99,100)]}
             
             rs_cf = RandomizedSearchCV(estimator=clf, param_distributions=param_distributions, 
-                                    n_iter=parm_spce, cv=5, scoring="explained_variance")
+                                    n_iter=parm_spce, cv=5, scoring="explained_variance", random_state=1)
             print("Zero-inflated model: CV starts for classifier")
             rs_cf.fit(X_train, y_train_tmp)
             print("Zero-inflated model: CV finished for classifier")
@@ -312,7 +312,7 @@ def fit_model_one_week_static(df_to_fit,grp_var,zero_inf_flg,dynamic_ftrs,alp_re
                                  'l1_ratio':np.linspace(0.05, 1, 100)}
             
             rs_rg = RandomizedSearchCV(estimator=rgr, param_distributions=param_distributions, 
-                                    n_iter=parm_spce, cv=5, scoring="explained_variance")
+                                    n_iter=parm_spce, cv=5, scoring="explained_variance", random_state=1)
             print("Zero-inflated model: CV starts for regressor")
             rs_rg.fit(X_train, y_train,sample_weight=sampl_wght_trn)
             print("Zero-inflated model: CV finished for classifier")
@@ -322,7 +322,7 @@ def fit_model_one_week_static(df_to_fit,grp_var,zero_inf_flg,dynamic_ftrs,alp_re
             param_distributions={'alpha' : alp_regrlsn, 'l1_ratio':np.linspace(0.05, 1, 100)}
             #
             rs = RandomizedSearchCV(estimator=rgr, param_distributions=param_distributions, 
-                               n_iter=parm_spce, cv=5, scoring="explained_variance")
+                               n_iter=parm_spce, cv=5, scoring="explained_variance", random_state=1)
             #param_distributions={'n_jobs':[-1]}
             #rs = RandomizedSearchCV(estimator=rgr, param_distributions=param_distributions,
             #                        n_iter=1, cv=5, scoring="explained_variance")
@@ -420,7 +420,7 @@ def fit_model_one_week_static(df_to_fit,grp_var,zero_inf_flg,dynamic_ftrs,alp_re
                                  'class_weight': [{0:x, 1:1.0-x} for x in np.linspace(0.0,0.99,100)]}
             
             rs_cf = RandomizedSearchCV(estimator=clf, param_distributions=param_distributions, 
-                                    n_iter=parm_spce, cv=5, scoring="explained_variance")
+                                    n_iter=parm_spce, cv=5, scoring="explained_variance", random_state=1)
             print(X_train.shape)
             print(len(y_train_tmp))
             print("Zero-inflated model: CV starts for classifier")
@@ -434,7 +434,7 @@ def fit_model_one_week_static(df_to_fit,grp_var,zero_inf_flg,dynamic_ftrs,alp_re
                                  'l1_ratio':np.linspace(0.05, 1, 100)}
             
             rs_rg = RandomizedSearchCV(estimator=rgr, param_distributions=param_distributions, 
-                                    n_iter=parm_spce, cv=5, scoring="explained_variance")
+                                    n_iter=parm_spce, cv=5, scoring="explained_variance", random_state=1)
             print("Zero-inflated model: CV starts for regressor")
             rs_rg.fit(X_train, y_train,sample_weight=sampl_wght_trn)
             print("Zero-inflated model: CV finished for classifier")
@@ -444,7 +444,7 @@ def fit_model_one_week_static(df_to_fit,grp_var,zero_inf_flg,dynamic_ftrs,alp_re
             param_distributions={'alpha' : alp_regrlsn, 'l1_ratio':np.linspace(0.05, 1, 100)}
             #
             rs = RandomizedSearchCV(estimator=rgr, param_distributions=param_distributions, 
-                               n_iter=parm_spce, cv=5, scoring="explained_variance")
+                               n_iter=parm_spce, cv=5, scoring="explained_variance", random_state=1)
             #param_distributions={'n_jobs':[-1]}
             #rs = RandomizedSearchCV(estimator=rgr, param_distributions=param_distributions,
             #                        n_iter=1, cv=5, scoring="explained_variance")
@@ -588,7 +588,7 @@ def fit_model_one_week_dynamic(df_to_fit,grp_var,which_clustr_grp,alp_regrlsn,pa
         
         # OVER WRITING REGULARISED REGRESSION WITH NORMAL REGRESSION
         rs = RandomizedSearchCV(estimator=LinearRegression(),param_distributions={'n_jobs' :[-1]},
-                                n_iter=1, cv=5, scoring="explained_variance")
+                                n_iter=1, cv=5, scoring="explained_variance" )
         
         rs.fit(X_train, y_train)
         
