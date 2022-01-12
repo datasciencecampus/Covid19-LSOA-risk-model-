@@ -30,8 +30,6 @@ static_df = pp.normalise_data(static_df, 'static')
 ethnicity_list = dt.get_ethnicities_list(static_df,subgroups=True)
 static_df = static_df.drop(columns=ethnicity_list) 
 
-static_df=static_df[static_df.LSOA11CD.str.startswith('E')] #only keeping England
-
 static_df=static_df.fillna(0)  #fill 0s(nans exist in occupations where nobody works in them)
 
 # apply_vif_statistic notebook is no longer being used
@@ -55,8 +53,6 @@ dynamic_df = dynamic_df.merge(static_subset_df,on=['LSOA11CD'],how='right')
 # date filter due to join being changed to outer resulting in extraneous rows prior to the pandemic
 dynamic_df = dynamic_df[dynamic_df['Date'] >= '2020-10-04']
     
-# Filter to England only
-dynamic_df = dynamic_df[dynamic_df.LSOA11CD.str.startswith('E')] 
 dynamic_df = dynamic_df.fillna(0)
 
 dynamic_df['Country'] = 'England'

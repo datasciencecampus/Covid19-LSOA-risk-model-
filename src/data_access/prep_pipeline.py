@@ -12,6 +12,9 @@ import geopandas as gpd
 current_path = os.path.abspath('.')
 sys.path.append(os.path.dirname(current_path))
 
+# this may or may not break normal useage of this module...
+sys.path.append(os.getcwd() + '/src')
+
 from data_access.data_factory import DataFactory as factory
 from utils import data as dt
 from utils import config as cf
@@ -19,7 +22,7 @@ import utils.dynamic as dyn
 
 #############################
 
-def read_data(table_type, table_dict = cf.data_tables, join_col = 'LSOA11CD'):
+def read_data(table_type, table_dict = cf.data_tables, join_col = 'LSOA11CD', england_only = True):
     '''
     Read in and join a list of data tables on a common column.
     
@@ -31,6 +34,9 @@ def read_data(table_type, table_dict = cf.data_tables, join_col = 'LSOA11CD'):
     
     :param join_col: The common column on which to join ALL of the tables. Any common columns not specified here will be dropped from the right table in each join. Defaults to 'LSOA11CD'
     :type join_col: string or list of strings
+    
+    :param england_only: Whether to filter to English LSOAs only. Default True. 
+    :type england_only: bool
     
     :return: DataFrame of joined datasets
     :rtype: Pandas DataFrame
@@ -49,6 +55,9 @@ def read_data(table_type, table_dict = cf.data_tables, join_col = 'LSOA11CD'):
             
     drop_cols = [col for col in df_final.columns if col.endswith('_drop')]
     df_final.drop(columns=drop_cols, inplace=True)
+    
+    if england_only:
+         df_final = df_final[df_final['LSOA11CD'].str.startswith('E')]
             
     return df_final
 
