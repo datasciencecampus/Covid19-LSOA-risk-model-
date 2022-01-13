@@ -208,6 +208,21 @@ def sklearn_vif(exogs, data):
     return df_vif
 
 
-def split_time_slice(df,t1,t2):
+def create_time_slice(df, t1, t2):
+    '''
+    Return the dataframe 'df' sliced between two given dates, 't1' and 't2'
     
-    return df[(df['Date']>t1)&(df['Date']<=t2)]
+    :param df: A DataFrame to which slicing should be applied
+    :type df: Pandas DataFrame
+    
+    :param t1: The beginning of the time slice
+    :type t1: string
+    
+    :param t2: The end of the time slice
+    :type t2: string    
+    
+    :return: A slice of DataFrame df between t1 and t2
+    :rtype: Pandas DataFrame
+    '''
+    
+    return df[(df['Date'] > t1) & (df['Date'] <= t2)]
