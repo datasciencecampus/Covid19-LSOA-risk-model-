@@ -47,7 +47,7 @@ class AggregatedTestsLSOA(IData):
             FROM `{}`
             WHERE Specimen_Date >={}
             GROUP BY Lower_Super_Output_Area_Code, Specimen_Date
-        """.format(conf.data_location_big_query['cases'], conf.chsen_datum) #TOC: Added in user defined table and date from config 
+        """.format(conf.data_location_big_query['cases'], conf.data_start_date) #TOC: Added in user defined table and date from config 
 
         
         query_job = super().client.query(
@@ -142,7 +142,7 @@ class FlowsMarsData(IData):
         
         df_flows_mars_data.rename(columns={'date':'Date'},inplace=True)
         df_flows_mars_data['Date']=pd.to_datetime(df_flows_mars_data['Date'])
-        df_flows_mars_data=df_flows_mars_data[df_flows_mars_data['Date']>=pd.to_datetime(conf.chsen_datum)].reset_index(drop=True)
+        df_flows_mars_data=df_flows_mars_data[df_flows_mars_data['Date']>=pd.to_datetime(conf.data_start_date)].reset_index(drop=True)
         
         df_flows_mars_data=df_flows_mars_data.groupby(['Date', 'LSOA11CD'])\
         [['lsoa_inflow_volume']].sum().reset_index()
@@ -305,7 +305,7 @@ class LSOAVaccinations(IData):
         #AA-REMOVED A DUPLICATE OF LINE ABOVE
 
         vaccination_df['Date']=pd.to_datetime(vaccination_df['Date'])
-        vaccination_df=vaccination_df[vaccination_df['Date']>=pd.to_datetime(conf.chsen_datum)].reset_index(drop=True) 
+        vaccination_df=vaccination_df[vaccination_df['Date']>=pd.to_datetime(conf.data_start_date)].reset_index(drop=True) 
         
         vaccination_df['total_vaccinated_first_dose']=vaccination_df['dose_first_vaccine_male'] +vaccination_df['dose_first_vaccine_female']
         vaccination_df['total_vaccinated_second_dose']=vaccination_df['dose_second_vaccine_male'] +vaccination_df['dose_second_vaccine_female']
@@ -612,7 +612,7 @@ class DeimosAggregated(IData):
         query_people_counts="""SELECT date_dt, purpose, msoa , SUM(people) as msoa_people
                                 FROM `ons-hotspot-prod.ingest_deimos_2021.uk_footfall_people_counts_ag`
                                 WHERE date_dt>={} AND ((msoa LIKE 'E%') OR (msoa LIKE 'W%')) 
-                                GROUP BY date_dt, purpose, msoa""".format(conf.chsen_datum)  #read in deimos date seprated by age and gender
+                                GROUP BY date_dt, purpose, msoa""".format(conf.data_start_date)  #read in deimos date seprated by age and gender
         query_job_deimos = super().client.query(query_people_counts) 
         people_counts_df_msoa_daily = query_job_deimos.to_dataframe()
 
