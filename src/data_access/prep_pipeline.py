@@ -276,10 +276,10 @@ def apply_timelag(dynamic_df, dynamic_df_norm):
     
     if flg_stnrty_both:
         dynamic_df_lagged_merged.to_gbq(cf.lagged_dynamic_stationary,\
-                               project_id = project_name,if_exists='replace')
+                               project_id = cf.project_name,if_exists='replace')
     else:
         dynamic_df_lagged_merged.to_gbq(cf.lagged_dynamic_non_stationary,\
-                                                 project_id=project_name,if_exists='replace')
+                                                 project_id=cf.project_name,if_exists='replace')
     
     return dynamic_df_lagged_merged
     
