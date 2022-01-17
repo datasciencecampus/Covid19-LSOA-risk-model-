@@ -63,15 +63,15 @@ def read_data(table_type, table_dict = cf.data_tables, join_col = 'LSOA11CD', en
 
 def geo_merge(df, geo_col = 'geometry'):
     '''
-    Add on geographic information with an 'Area' column, and combine intermediate travel clusters. 
+    Calculate the area of a geometry column in a dataframe and add to the dataframe as an 'Area' column.
     
-    :param df: Input dataframe, from read_data function. Requires 'travel_cluster' column for travel cluster grouping function.
+    :param df: Input dataframe, from read_data function
     :type df: Pandas DataFrame
     
-    :param geo_col: Name of column from which to calculate the area
-    :type geo_col: string
+    :param geo_col: Name of column from which to calculate the area. This column must have a geometry dtype. 
+    :type geo_col: str
     
-    :return: DataFrame with Area and combined and renamed travel cluster groupings
+    :return: DataFrame with Area
     :rtype: Pandas DataFrame
     
     '''
@@ -80,9 +80,6 @@ def geo_merge(df, geo_col = 'geometry'):
     gdf = gpd.GeoDataFrame(df, crs="EPSG:27700", geometry=df[geo_col])
     gdf.crs
     gdf['Area'] = gdf[geo_col].area/10**6
-
-    # combine and rename travel clusters 
-    df = dt.combining_and_remap_travel_cluster(gdf)
     
     return df
 

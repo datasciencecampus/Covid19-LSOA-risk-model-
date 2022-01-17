@@ -15,6 +15,8 @@ from data_access.idata import IData
 import utils.config as conf
 import utils.dynamic as dyn
 import utils.model as md
+import utils.data as dt
+
 from functools import reduce
 
 
@@ -216,20 +218,8 @@ class MobilityClustersProcessed(IData):
         travel_clusters.drop(columns=['lsoa11nm', 'index_right'], inplace=True)
         travel_clusters.rename(columns={'ct_2':'travel_cluster', 'lsoa11cd':'LSOA11CD'}, inplace=True)
 
-        travl_clst_dict={'L3. Transition area from L2 to L4': 'L4. >70% suburban dwellers',
-               'L5. Transition area from L4 to L6': 'L4. >70% suburban dwellers',
-               'L7. Transition area from L6 to L8':'L6. >70% exurban dwellers'}
-
-        travel_clusters['travel_cluster']=travel_clusters['travel_cluster'].map(travl_clst_dict).fillna(travel_clusters['travel_cluster'])
-
-        travl_renam_dict={'L1. >70% metropolitan core dwellers':'L1. >70% metropolitan core dwellers',
-                         'L2. >70% outer metropolitan dwellers':'L2. >70% outer metropolitan dwellers',
-                         'L4. >70% suburban dwellers':'L3. >70% suburban dwellers',
-                         'L6. >70% exurban dwellers':'L4. >70% exurban dwellers',
-                         'L8. >70% rural dwellers':'L5. >70% rural dwellers'}
-
-        travel_clusters['travel_cluster']=travel_clusters['travel_cluster'].\
-        map(travl_renam_dict).fillna(travel_clusters['travel_cluster'])
+        travel_clusters = dt.combining_and_remap_travel_cluster(travel_clusters)
+        
         return travel_clusters
 
 class LSOADailyFootfall(IData):
