@@ -1,9 +1,11 @@
 import numpy as np
 
 
-chsen_datum = "'2020-04-01'"  #date to select data from
+data_start_date = "'2020-04-01'"  #date to select data from
 
 model_start_date = "2021-01-01" #date to begin modelling
+
+model_type = "time_tranche"
 
 geography_dict = {'region':'RGN19NM',
               'travel_cluster':'travel_cluster',
@@ -21,9 +23,16 @@ static_subset = ['LSOA11CD', 'ALL_PEOPLE', 'Area', 'travel_cluster', 'RGN19NM', 
 # dictionary of datasets to read in 
 # these link to the DataFactory.get() method in data_factory.py
 data_tables = {
+    
+    # static features are shared by both models
      'static': ['static_vars', 'mid_year_lsoa', 'mobility_clusters_processed', 'flow_to_work', 'LSOA_2011']
+    
+    # two-way fixed effects model uses all of the dynamic features
     ,'dynamic': ['aggregated_tests_lsoa', 'lsoa_vaccinations', 'Deimos_trip_end_count', 'lsoa_daily_footfall']
+
 }
+
+tranche_model_idbr_features = ['care_homes_warehousing', 'ready_meals_textiles', 'meat_and_fish_processing']
 
 # Features dictionary
 # This is a nested dictionary of dictionaries to allow easy looping within functions
@@ -262,9 +271,7 @@ static_col_drop = ['BAME_PROP',
  'IMD_SCORE',
  'HEALTH_AGE_UNDER_50_GOOD_FAIR_HEALTH',
  'HEALTH_AGE_65_to_74_BAD_HEALTH',
- 'ALL_PEOPLE',
  'LSOA11NMW',
- 'Area',
  'NO_UNPAID_CARE',
  'HEALTH_AGE_75_PLUS_GOOD_FAIR_HEALTH',
  'HOUSEHOLD_SIZE_1_PERSON_IN_HOUSEHOLD',
@@ -273,10 +280,33 @@ static_col_drop = ['BAME_PROP',
  'HEALTH_AGE_65_to_74_GOOD_FAIR_HEALTH',
  'HEALTH_AGE_UNDER_50_BAD_HEALTH',
  'geometry',
- 'FAMILIES_WITH_DEPENDENT_CHILDREN_ALL_FAMILIES']
+ 'FAMILIES_WITH_DEPENDENT_CHILDREN_ALL_FAMILIES',
+ 'HOUSEHOLD_SIZE_3_PLUS_PEOPLE_IN_HOUSEHOLD',
+ 'COMMUNAL_ESTABLISHMENT_MEDICAL_AND_CARE_CARE_HOMES',
+ 'COMMUNAL_ESTABLISHMENT_OTHER_PRISON_AND_OTHER_DETENTION',
+ 'UNPAID_CARE_1_HOUR_PLUS',
+ 'CENSUS_2011_WHITE', 'CENSUS_2011_MIXED_MULTIPLE_ETHINIC_GROUPS',
+ 'CENSUS_2011_OTHER_ETHNIC_GROUP',
+ 'HOUSEHOLD_SIZE_2_PEOPLE_IN_HOUSEHOLD',
+ 'HOUSEHOLD_SIZE_3_PEOPLE_IN_HOUSEHOLD',
+ 'SHARED_DWELLINGS_NUMBER_OF_PEOPLE',
+ 'COMMUNAL_ESTABLISHMENT_OTHER_EDUCATION',
+ 'COMMUNAL_ESTABLISHMENT_OTHER_HOSTEL_OR_TEMPORARY_SHELTER_FOR_THE_HOMELESS',
+ 'IMD_INCOME_SCORE',
+ 'STUDENT_LIVING_WITH_PARENTS', 
+ 'age_0_to_12', 
+ 'age_13_to_17',
+ 'age_30_to_39', 
+ 'age_40_to_49', 
+ 'age_50_to_54', 
+ 'age_55_to_59',
+ 'age_60_to_64', 
+ 'age_65_to_69', 
+ 'age_70_to_74', 
+ 'age_75_to_79',
+ 'age_80_to_90_PLUS']
 
 # User inputs the location of data they wish to use 
-
 data_location_big_query = {}
 
 data_location_big_query['cases'] = "ons-hotspot-prod.ingest_track_and_trace.aggregated_positive_tests_lsoa"
@@ -290,12 +320,16 @@ data_location_big_query['mobility_DEIMOS'] = "ons-hotspot-prod.wip.people_counts
 # file names
 project_name = 'ons-hotspot-prod'
 
-static_data_file = 'review_ons.risk_model_static_variables_main'
+static_data_file = 'review_ons.risk_model_static_variables'
+
 dynamic_data_file = 'review_ons.dynamic_lsoa_variables'
 dynamic_data_file_normalised = 'review_ons.dynamic_lsoa_variables_raw_norm_chsn_lag'
 
 lagged_dynamic_stationary = 'review_ons.time_lagged_dynamic_data_deimos_cumsum_stationary_main'
 lagged_dynamic_non_stationary = 'review_ons.time_lagged_dynamic_data_deimos_cumsum_non_stationary_main'
+
+tranches_model_input_processed = 'review_ons.tranches_model_input_processed'
+tranches_model_test_data = 'review_ons.tranches_model_test_data'
 
 # zero-inflated model training
 zero_infltd_modl=False
@@ -413,5 +447,27 @@ tranche_residuals_gbq_loc = 'wip.multi_grp_pred_no_zir_static_dynamic_tranches'
 tranche_latest_predictions_gbq_loc = 'wip.multi_grp_pred_test_data_no_zir_static_dynamic_tranches'
 tranche_model_features_gbq_loc = 'review_ons.tranche_model_features'
 
-# Define the number of tranchess
+# whether to use linear regression or regression with regularisation for prediction
+linear_rgr_flg=False
+
+# the total number of LSOAs in England 
+n_lsoa = 32844
+
+# number of tranches to model
 n_tranches = 7
+
+# Dates to slit on for the different time tranches
+tranche_dates = ['2020-04-26','2020-08-31','2020-11-14','2020-12-31','2021-02-14','2021-04-29','2021-07-15']
+
+# Description of each tranche
+#eg. period between '2020-04-26'to '2020-08-31' is of low prevalence and majority of schools closed in that period
+tranche_description = ['low_prev_no_school','high_prev_school_opn','high_prev_school_opn_alph','high_prev_no_school_alph_vaccn',\
+        'low_prev_school_opn_vaccn_dbl','high_prev_school_opn_dlta_vaccn_dbl','lifting_lockdown']
+
+# the key is a new column to be created in the static data
+# the values in the new column are the sum of the columns listed in the value of this dictionary
+static_cols_to_sum = {'ready_meals_textiles': ['ready_meals', 'textiles'] 
+                     ,'care_homes_warehousing': ['care', 'warehousing']
+                     }
+
+strt_training_period = ""
