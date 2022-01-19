@@ -140,9 +140,9 @@ def static_model(alphas_val = cf.alphas_val,
     
     if save_results:
 
-        str_coef_tc_static.to_gbq(cf.risk_coef + dataset_suffix, project_id=project_name, if_exists='replace')
-        str_coef_tc_static_ci.to_gbq(cf.risk_coef_ci + dataset_suffix, project_id=project_name, if_exists='replace')
-        str_pred_tc_static.to_gbq(cf.risk_pred + dataset_suffix, project_id=project_name, if_exists='replace')
+        str_coef_tc_static.to_gbq(cf.risk_coef + dataset_suffix, project_id=cf.project_name, if_exists='replace')
+        str_coef_tc_static_ci.to_gbq(cf.risk_coef_ci + dataset_suffix, project_id=cf.project_name, if_exists='replace')
+        str_pred_tc_static.to_gbq(cf.risk_pred + dataset_suffix, project_id=cf.project_name, if_exists='replace')
 
     return str_coef_tc_static, str_coef_tc_static_ci
 
@@ -271,9 +271,9 @@ def dynamic_model(str_coef_tc_static,
     
     if save_results:
 
-        str_coef_tc_dynamic.to_gbq(cf.risk_coef + dataset_suffix, project_id=project_name, if_exists='replace')
-        str_coef_tc_dynamic_ci.to_gbq(cf.risk_coef_ci+ dataset_suffix, project_id=project_name,if_exists='replace')
-        str_pred_tc_dynamic.to_gbq(cf.risk_pred+ dataset_suffix, project_id=project_name,if_exists='replace')
+        str_coef_tc_dynamic.to_gbq(cf.risk_coef + dataset_suffix, project_id=cf.project_name, if_exists='replace')
+        str_coef_tc_dynamic_ci.to_gbq(cf.risk_coef_ci+ dataset_suffix, project_id=cf.project_name,if_exists='replace')
+        str_pred_tc_dynamic.to_gbq(cf.risk_pred+ dataset_suffix, project_id=cf.project_name,if_exists='replace')
 
     risk_predictors_df=pd.concat([str_coef_tc_static,str_coef_tc_dynamic])
 
@@ -287,8 +287,8 @@ def dynamic_model(str_coef_tc_static,
     
     if save_results:
 
-        risk_predictors_df.to_gbq(cf.risk_coef+dataset_suffix, project_id=project_name, if_exists='replace')
-        risk_predictors_df_ci.to_gbq(cf.risk_coef_ci+dataset_suffix, project_id=project_name, if_exists='replace')
+        risk_predictors_df.to_gbq(cf.risk_coef+dataset_suffix, project_id=cf.project_name, if_exists='replace')
+        risk_predictors_df_ci.to_gbq(cf.risk_coef_ci+dataset_suffix, project_id=cf.project_name, if_exists='replace')
 
     return str_coef_tc_dynamic, str_coef_tc_dynamic_ci
 
