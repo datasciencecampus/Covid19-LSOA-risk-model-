@@ -1,14 +1,11 @@
-# Preprocessing
-# Sections: Read in static data; read in dynamic data; apply time lag to dynamic datasets for modelling
-
-# Import Packages
+# import packages
 import os
 import sys
 
 import pandas as pd
 import pandas_gbq
 
-# Import from local data files
+# import from local data files
 current_path = os.path.abspath('.')
 sys.path.append(os.path.dirname(current_path))
 
@@ -149,9 +146,6 @@ if cf.model_type == "time_tranche":
     
     # generate the test data set - weeks for which we have mobility data but no cases data
     test_df = pp.create_test_data(cases_mobility_all_weeks_df, static_df, deimos_footfall_df)
-    
-    # generate a string containing the date range for the test data
-    #test_data_range = str(test_df['Date'].min())[:10] + '-' + str(test_df['Date'].max())[:10]
     
     print("Organising the data into time tranches...")
     

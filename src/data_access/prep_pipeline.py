@@ -546,7 +546,7 @@ def create_time_tranches(all_weeks_df,
         group_by_cols = ['Date', 'LSOA11CD', 'tranche_desc', 'travel_cluster']
 
         # compute the mean over each week in the tranche
-        tranche_df = tranche_df.groupby(group_by_cols)[[x for x in tranche_df.columns if x not in group_by_cols]].mean().reset_index()
+        tranche_df = tranche_df.groupby(group_by_cols).mean().reset_index()
 
         # sort by LSOA code
         tranche_df = tranche_df.sort_values(by='LSOA11CD').reset_index(drop=True)
@@ -590,12 +590,6 @@ def derive_tranche_order(all_tranches_df, tranche_description = cf.tranche_descr
 
     # zip the tranche descriptions and tranche numbers
     event_order_dict = dict(zip(tranche_description, tranche_order))
-
-    # dict of tranche number: tranche description
-    rvse_event_dict = {v: k for k, v in event_order_dict.items()}
-
-    # dict of tranche description: tranche date range
-    rvse_date_dict = {v: k for k, v in event_dict.items()}
 
     # create new column for tranche number
     all_tranches_df['tranche_order'] = all_tranches_df['tranche_desc'].map(event_order_dict)
