@@ -19,8 +19,6 @@ import pgeocode
 from statsmodels.tools.eval_measures import rmse, aic
 from statsmodels.tsa.stattools import grangercausalitytests
 
-import swifter
-
 from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.tsa.stattools import adfuller
 from statsmodels.graphics.tsaplots import plot_acf

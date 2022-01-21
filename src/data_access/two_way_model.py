@@ -269,6 +269,9 @@ def dynamic_model(str_coef_tc_static,
 
     dataset_suffix = cf.model_suffixes['dynamic']
     
+    # convert to float to allow successful concat and saving of risk_predictors df if alpha is None
+    str_coef_tc_dynamic['regularisation_alpha'] = str_coef_tc_dynamic['regularisation_alpha'].astype(np.float64)
+    
     if save_results:
 
         str_coef_tc_dynamic.to_gbq(cf.risk_coef + dataset_suffix, project_id=cf.project_name, if_exists='replace')
