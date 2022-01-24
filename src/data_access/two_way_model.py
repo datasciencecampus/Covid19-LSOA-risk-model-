@@ -1,19 +1,3 @@
-## LB notes (temp):
-# risk_weekly_static
-# risk_weekly_dynamic
-
-## to do:
-# import list cull
-
-###########
-
-# Modelling
-# Sections: Model COVID cases based on static variables, and then model the residuals using the dynamic variables
-
-# SECTION ONE OF TWO
-# Model COVID cases using static variables (LSOA attributes which do not change)
-
-# Import Packages
 import os
 import sys
 import math
@@ -35,7 +19,7 @@ from utils import config as cf
 
 def static_model(alphas_val = cf.alphas_val, 
                  parm_spce_grid_srch = cf.parm_spce_grid_srch,
-                 grp_var = 1,
+                 train_weeks = 1,
                  zero_inf_flg_st = cf.zero_infltd_modl,
                  save_results = True):
     
@@ -48,8 +32,8 @@ def static_model(alphas_val = cf.alphas_val,
     :param parm_spce_grid_srch: Number of different combinations to use in grid search for hyperparameters. Default is 500, set in config file.
     :type parm_spce_grid_srch: int
     
-    :param grp_var: Number of prior weeks to train the model. Defaults to 1.
-    :type grp_var: int
+    :param train_weeks: Number of prior weeks to train the model. Defaults to 1.
+    :type train_weeks: int
     
     :param zero_inf_flg_st: Whether to use zero-inflated regressor model. Default to False, set in config.
     :type zero_inf_flg_st: bool
@@ -69,8 +53,6 @@ def static_model(alphas_val = cf.alphas_val,
 
     date_dict=df_week_datum.set_index('week').to_dict()['Date']
 
-    # to do: add test to check there are the same number of LSOAs in consecutive weeks
-
     # **FINDING STATIC RISK FACTOR/PREDICTORS FOR EACH TRAVEL CLUSTER**
 
     # Finding the most important features for each travel cluster which 
@@ -82,7 +64,7 @@ def static_model(alphas_val = cf.alphas_val,
 
     # TO ACHIEVE THIS, WE DO THE FOLLOWING:
 
-    # (a) TRAIN TRAGET VARIABLE ON STATIC VARIABLES ON A WEEKLY BASIS AND FIND RISK ESTIMATES FOR THE SIGNIFICANT PREDICTORS
+    # (a) TRAIN TARGET VARIABLE ON STATIC VARIABLES ON A WEEKLY BASIS AND FIND RISK ESTIMATES FOR THE SIGNIFICANT PREDICTORS
 
     # (b) WE THEN MODEL **THE RESIDUALS (AND NOT THE CHANGE IN RESIDUALS ?)** OBTAINED FROM (a) ON THE  CHANGE OF DYNAMIC FEATURES (FROM PREVIOUS WEEK) AND CUMULATIVE CASES (PER UNIT AREA) AND CUMULATIVE VACCINATED LSOA POPULATION FROM THE PREVIOUS WEEK
 
@@ -105,7 +87,7 @@ def static_model(alphas_val = cf.alphas_val,
         df_chsen=df_chsen.sort_values(by=['week_number','LSOA11CD']).reset_index(drop=True)
         df_chsen=df_chsen[[x for x in df_chsen.columns if x not in ['Date','week_number','Month']]]
         #print(df_chsen)
-        pred_tc,coef_tc=md.fit_model_one_week_static(df_chsen,grp_var,zero_inf_flg_st,dynamic_features,alphas_val,parm_spce_grid_srch)
+        pred_tc,coef_tc=md.fit_model_one_week_static(df_chsen,train_weeks,zero_inf_flg_st,dynamic_features,alphas_val,parm_spce_grid_srch)
         str_pred_tc_static.append(pred_tc)
         str_coef_tc_static.append(coef_tc)
 
@@ -155,7 +137,7 @@ def dynamic_model(str_coef_tc_static,
                  str_coef_tc_static_ci,
                  alphas_val = cf.alphas_val, 
                  parm_spce_grid_srch = cf.parm_spce_grid_srch,
-                 grp_var = 1,
+                 train_weeks = 1,
                  which_clustrng = cf.granularity_for_modelling,
                  save_results = True):
     
@@ -174,8 +156,8 @@ def dynamic_model(str_coef_tc_static,
     :param parm_spce_grid_srch: Number of different combinations to use in grid search for hyperparameters. Default is 500, set in config file.
     :type parm_spce_grid_srch: int
     
-    :param grp_var: Number of prior weeks to train the model. Defaults to 1.
-    :type grp_var: int
+    :param train_weeks: Number of prior weeks to train the model. Defaults to 1.
+    :type train_weeks: int
     
     :param which_clustrng: Chosen geography granularity for modelling. Must be a column in the dataset. Defaults to 'Country', set in config file.
     :type which_clustrng: string
@@ -183,7 +165,7 @@ def dynamic_model(str_coef_tc_static,
     :param save_results: Flag for whether to output results to tables or not. Default True.
     :type: bool
 
-    :return: Two dataframes, one each of the coefficients and confidence intervals of models generated.
+    :return: One dataframe with the model coefficients, and one dataframe with the confidence intervals.
     :rtype: Pandas DataFrames
     """
     
@@ -222,7 +204,7 @@ def dynamic_model(str_coef_tc_static,
         df_chsen=df_chsen[[x for x in df_chsen.columns if x not in ['Date','week_number','lsoa_inflow_volume',
                                                                     'total_vaccinated_second_dose_prop_population_cumsum',
                                                                     'COVID_Cases_per_unit_area_cumsum','commute_inflow_sqkm', 'other_inflow_sqkm']]]
-        pred_tc,coef_tc,se_coef_tc=md.fit_model_one_week_dynamic(df_chsen,grp_var,which_clustrng,alphas_val,parm_spce_grid_srch)
+        pred_tc,coef_tc,se_coef_tc=md.fit_model_one_week_dynamic(df_chsen,train_weeks,which_clustrng,alphas_val,parm_spce_grid_srch)
         str_pred_tc_dynamic.append(pred_tc)
         str_coef_tc_dynamic.append(coef_tc)
         str_se_coef_tc_dynamic.append(se_coef_tc)

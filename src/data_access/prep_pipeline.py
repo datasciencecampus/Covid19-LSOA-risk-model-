@@ -1,4 +1,3 @@
-# Import Packages
 import os
 import sys
 from functools import reduce
@@ -12,7 +11,6 @@ import geopandas as gpd
 current_path = os.path.abspath('.')
 sys.path.append(os.path.dirname(current_path))
 
-# this may or may not break normal useage of this module...
 sys.path.append(os.getcwd() + '/src')
 
 from data_access.data_factory import DataFactory as factory
