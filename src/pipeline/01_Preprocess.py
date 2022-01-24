@@ -1,14 +1,11 @@
-# Preprocessing
-# Sections: Read in static data; read in dynamic data; apply time lag to dynamic datasets for modelling
-
-# Import Packages
+# import packages
 import os
 import sys
 
 import pandas as pd
 import pandas_gbq
 
-# Import from local data files
+# import from local data files
 current_path = os.path.abspath('.')
 sys.path.append(os.path.dirname(current_path))
 
@@ -19,8 +16,13 @@ from utils import config as cf
 
 #############################
 
+print("Loading static data from BigQuery...")
+
 # read in static data
 static_df = pp.read_data('static')
+
+print("Processing static data...")
+
 static_df = pp.geo_merge(static_df)
 
 # normalise static data
@@ -30,80 +32,132 @@ static_df = pp.normalise_data(static_df, 'static')
 ethnicity_list = dt.get_ethnicities_list(static_df,subgroups=True)
 static_df = static_df.drop(columns=ethnicity_list) 
 
-static_df=static_df.fillna(0)  #fill 0s(nans exist in occupations where nobody works in them)
-
-# apply_vif_statistic notebook is no longer being used
-# but this still filters the columns in the final output
+#fill 0s (NaNs exist in occupations where nobody works in them)
+static_df = static_df.fillna(0)  
 
 static_df.drop(columns=cf.static_col_drop, inplace=True)
+
+# # combine the flow to work columns from factor analysis
+static_df = pp.sum_features(static_df)
 
 # save to wip file
 static_df.to_gbq(cf.static_data_file, project_id=cf.project_name,if_exists='replace')
 
-# read in dynamic data
-# shift up to be with static etc?
+# pre-processing for the two way fixed effects model
+if cf.model_type == "two_way_fixed_effects":
     
-dynamic_df = pp.read_data('dynamic', join_col=['LSOA11CD', 'Date'])
-
-# join on subset of static data for geographic variables
-col_list = cf.static_subset
-static_subset_df = static_df[col_list]   
-dynamic_df = dynamic_df.merge(static_subset_df,on=['LSOA11CD'],how='right')
-
-# date filter due to join being changed to outer resulting in extraneous rows prior to the pandemic
-dynamic_df = dynamic_df[dynamic_df['Date'] >= '2020-10-04']
+    print("Loading dynamic data for two-way fixed effects model...")
     
-dynamic_df = dynamic_df.fillna(0)
+    dynamic_df = pp.read_data('dynamic', join_col=['LSOA11CD', 'Date'])
 
-dynamic_df['Country'] = 'England'
+    # join on subset of static data for geographic variables
+    col_list = cf.static_subset
+    static_subset_df = static_df[col_list]   
+    dynamic_df = dynamic_df.merge(static_subset_df,on=['LSOA11CD'],how='right')
 
-# Normalise population by a common geography so lag values in following code can be calculated correctly
-# need to rethink these names
-lag_granularity = cf.chosen_granularity_for_lag
-dynamic_df_norm = dynamic_df.copy()
-
-df_travel_clusters = dynamic_df_norm.drop_duplicates(subset='LSOA11CD',keep='first')[[lag_granularity,'Area','ALL_PEOPLE']].groupby(lag_granularity).sum().reset_index()\
-.rename(columns={'Area':'Area_chosen_geo','ALL_PEOPLE':'Population_chosen_geo'})
-
-dynamic_df_norm = dynamic_df_norm.merge(df_travel_clusters, how='left', on=lag_granularity)
-
-# convert back to raw so we can divide by travel cluster area
-for i in [i for i in dynamic_df_norm.columns.tolist() if (('footfall' in i)|('inflow' in i))]:
-    dynamic_df_norm[i] = dynamic_df_norm[i]*dynamic_df_norm['Area']  
-
-# normalise dynamic data
-dynamic_df_norm = pp.normalise_data(dynamic_df_norm, 'dynamic_norm')
-
-dynamic_df_norm = pp.ffill_cumsum(dynamic_df_norm, cf.ffill_cols['dynamic_norm'])
-
-# normalise the original dynamic df
-dynamic_df = pp.normalise_data(dynamic_df, 'dynamic')
-
-dynamic_df = pp.ffill_cumsum(dynamic_df, cf.ffill_cols['dynamic'])
-                       
-# TODO: rename columns (or change subsequent code to use the new ones...)
-# also think of better suffix for these columns
-
-# rename columns to be in line with old code 
-# may want to remove this later
-dynamic_df.drop(columns=cf.dynamic_col_drop, inplace=True)
-dynamic_df.rename(columns=cf.dynamic_rename, inplace=True)
-
-
-dynamic_df.to_gbq(cf.dynamic_data_file, project_id=cf.project_name, if_exists='replace')
-dynamic_df_norm.to_gbq(cf.dynamic_data_file_normalised, project_id=cf.project_name, if_exists='replace')
-
-########################
-# lag section
-# writing to gbq is included in the function
-
-df_final = pp.apply_timelag(dynamic_df, dynamic_df_norm)
-
-
+    # date filter due to join being changed to outer resulting in extraneous rows prior to the pandemic
+    dynamic_df = dynamic_df[dynamic_df['Date'] >= '2020-10-04']
     
+    # Filter to England only
+    dynamic_df = dynamic_df[dynamic_df.LSOA11CD.str.startswith('E')] 
+    dynamic_df = dynamic_df.fillna(0)
+
+    dynamic_df['Country'] = 'England'
+
+    # Normalise population by a common geography so lag values in following code can be calculated correctly
+    # need to rethink these names
+    lag_granularity = cf.chosen_granularity_for_lag
+    dynamic_df_norm = dynamic_df.copy()
+
+    df_travel_clusters = dynamic_df_norm.drop_duplicates(subset='LSOA11CD',keep='first')[[lag_granularity,'Area','ALL_PEOPLE']].groupby(lag_granularity).sum().reset_index()\
+    .rename(columns={'Area':'Area_chosen_geo','ALL_PEOPLE':'Population_chosen_geo'})
+
+    dynamic_df_norm = dynamic_df_norm.merge(df_travel_clusters, how='left', on=lag_granularity)
+
+    # convert back to raw so we can divide by travel cluster area
+    for i in [i for i in dynamic_df_norm.columns.tolist() if (('footfall' in i)|('inflow' in i))]:
+        dynamic_df_norm[i] = dynamic_df_norm[i]*dynamic_df_norm['Area']  
+
+    # normalise dynamic data
+    dynamic_df_norm = pp.normalise_data(dynamic_df_norm, 'dynamic_norm')
+
+    dynamic_df_norm = pp.ffill_cumsum(dynamic_df_norm, cf.ffill_cols['dynamic_norm'])
+
+    # normalise the original dynamic df
+    dynamic_df = pp.normalise_data(dynamic_df, 'dynamic')
+
+    dynamic_df = pp.ffill_cumsum(dynamic_df, cf.ffill_cols['dynamic'])
+
+    # TODO: rename columns (or change subsequent code to use the new ones...)
+    # also think of better suffix for these columns
+
+    # rename columns to be in line with old code 
+    # may want to remove this later
+    dynamic_df.drop(columns=cf.dynamic_col_drop, inplace=True)
+    dynamic_df.rename(columns=cf.dynamic_rename, inplace=True)
+
+
+    dynamic_df.to_gbq(cf.dynamic_data_file, project_id=cf.project_name, if_exists='replace')
+    dynamic_df_norm.to_gbq(cf.dynamic_data_file_normalised, project_id=cf.project_name, if_exists='replace')
+
+    ########################
+    # lag section
+    # writing to gbq is included in the function
+
+    df_final = pp.apply_timelag(dynamic_df, dynamic_df_norm)
     
+# pre-processing for time tranches model
+if cf.model_type == "time_tranche":
     
+    print("Joining cases data...")
+        
+    # join cases to the static data
+    cases_all_weeks_df = pp.join_cases_to_static_data(static_df)
     
+    # generate a 'week number' column
+    cases_all_weeks_df = pp.derive_week_number(cases_all_weeks_df)
     
+    print("Loading mobility data from BigQuery...")
     
+    # load the mobility data from BigQuery
+    deimos_footfall_df = factory.get('lsoa_daily_footfall').create_dataframe()
+    
+    # load and process mobility data
+    cases_mobility_all_weeks_df = pp.join_tranches_mobility_data(cases_all_weeks_df, deimos_footfall_df)
+    
+    # convert mobility metric units from square kilometres to sqare metres
+    cases_mobility_all_weeks_df = pp.convert_units(df = cases_mobility_all_weeks_df, 
+                                                   colname = 'worker_visitor_footfall_sqkm',
+                                                   factor = 0.000001,
+                                                   new_colname = 'worker_visitor_footfall_sqm')
+    
+    # import list of IDBR features from the config file
+    idbr_features = cf.tranche_model_idbr_features
+    
+    # loop over IDBR features converting from square kilometres to hectares
+    for feature in idbr_features:
+        
+        cases_mobility_all_weeks_df = pp.convert_units(df = cases_mobility_all_weeks_df, 
+                                                       colname = feature, 
+                                                       factor = 0.01)
+    
+    # generate the test data set - weeks for which we have mobility data but no cases data
+    test_df = pp.create_test_data(cases_mobility_all_weeks_df, static_df, deimos_footfall_df)
+    
+    print("Organising the data into time tranches...")
+    
+    # split the data into tranches
+    tranches_df = pp.create_time_tranches(cases_mobility_all_weeks_df)
+    
+    # create a 'tranche_order' column for plotting later
+    tranches_df = pp.derive_tranche_order(tranches_df)
+    
+    print("Writing tranche model training and test data to BigQuery...")
+    
+    # write the results to BigQuery 
+    tranches_df.to_gbq(cf.tranches_model_input_processed, project_id=cf.project_name, if_exists='replace')
+    test_df.to_gbq(cf.tranches_model_test_data, project_id=cf.project_name, if_exists='replace')
+        
+else:
+    raise ValueError('The ''model_type'' provided in the config file is invalid. See config file for options.')
     

@@ -59,7 +59,7 @@ def read_data(table_type, table_dict = cf.data_tables, join_col = 'LSOA11CD', en
     if england_only:
          df_final = df_final[df_final['LSOA11CD'].str.startswith('E')]
             
-    return df_final
+    return df_final   
 
 def geo_merge(df, geo_col = 'geometry'):
     '''
@@ -149,6 +149,43 @@ def ffill_cumsum(df, col_list, sort_col='Date', group_col = 'LSOA11CD'):
     df.fillna(0, inplace=True)
     
     return df
+
+def sum_features(df, dic = cf.static_cols_to_sum):
+    '''
+    Create new features by summing the values of other features in a dataframe. The definition for
+    which features should be summed is provided as a dictionary 'static_cols_to_sum' from the config file.
+    The columns containing the individual features before summation are removed from the dataframe.
+    
+    :param df: The dataframe of static features
+    :type df: Pandas DataFrame
+    
+    :param dic: A dictionary where the keys are the names of new column to be created and the values are
+    the individual columns to be summed to create them.
+    :type dic: dictionary
+    
+    :return: A dataframe with new summed features added and the individual feature columns removed
+    :rtype: Pandas DataFrame
+    '''
+    
+    # create a copy of the DataFrame
+    df_copy = df.copy()
+    
+    # for each new column, and list of columns to sum
+    for new_col, cols_to_sum in dic.items():
+    
+        # create the new column and populate with zeroes
+        df_copy[new_col] = 0
+
+        # for each item in the list of columns to sum
+        for col_to_sum in cols_to_sum:
+
+            # add its value to the new column
+            df_copy[new_col] = df_copy[new_col] + df_copy[col_to_sum]
+            
+            # drop the original column
+            df_copy.drop(col_to_sum, inplace=True, axis=1)
+        
+    return df_copy
 
 def apply_timelag(dynamic_df, dynamic_df_norm):
     '''
@@ -241,7 +278,6 @@ def apply_timelag(dynamic_df, dynamic_df_norm):
     dynamic_df_lsoa_diff = dynamic_df_lsoa_diff.merge(dynamic_df_lsoa,on=['Date','LSOA11CD'],how='inner')
     
     # applying time lag to variables
-
     dynamic_df_lagged = []
 
     for mob_col in mobility_vars:
@@ -282,9 +318,324 @@ def apply_timelag(dynamic_df, dynamic_df_norm):
                                                  project_id=cf.project_name,if_exists='replace')
     
     return dynamic_df_lagged_merged
-    
-    
-    
-    
 
+
+def join_cases_to_static_data(static_df):
+    """
+    Prepare the Test & Trace data containing the number of positive cases at LSOA level. The number of cases
+    is left joined to the exist static data to ensure that a record exists for every LSOA in every week.
     
+    :param static_df: The processed static data set
+    :type static_df: Pandas DataFrame
+    
+    :return: A Pandas DataFrame containing static variables and cases for each LSOA each week
+    :rtype: Pandas DataFrame
+    """
+    
+    # ingest cases data
+    cases_df = factory.get('aggregated_tests_lsoa').create_dataframe()
+
+    # sort cases data by date
+    cases_df_datum = cases_df[['Date','LSOA11CD','COVID_Cases']].sort_values(by='Date').reset_index(drop=True)
+
+    # create a list of dataframes of cases, one df for each week 
+    cases_df_datum = [pd.DataFrame(y) for x, y in cases_df_datum.groupby('Date', as_index=False)]
+
+    cases_df_datum_mrgd = []
+
+    # The cases dataframe is split into different dates.
+    # This splitting allows for each dataframe to be left joined to the static data
+    # Therefore there will be a record for cases for every LSOA in every week
+    # If no cases data is present for a given week in a given LSOA, the 'Date'
+    # field is filled with the 'Date' value from that DataFrame
+
+    # for each df
+    for splt_df in cases_df_datum:
+
+        # store the date for the given DataFrame
+        datm = splt_df['Date'].unique()[0]
+
+        # left-join cases onto the static data
+        df = static_df.merge(splt_df,how='left',on=['LSOA11CD'])
+
+        # fill any gaps in the cases data with the correct date
+        df['Date'] = df['Date'].fillna(datm)
+
+        # any dates that needed to be filled had zero cases for that week
+        df['COVID_Cases'] = df['COVID_Cases'].fillna(0)
+
+        # apply normalisation
+        df['COVID_Cases'] = df['COVID_Cases'].div(df['Area'])
+
+        cases_df_datum_mrgd.append(df)
+
+    # stack the dataframes        
+    cases_static_df = pd.concat(cases_df_datum_mrgd).reset_index(drop=True)
+
+    # drop the area column
+    cases_static_df.drop('Area', axis=1, inplace=True)
+
+    # rename to reflect normalisation
+    cases_static_df.rename(columns={'COVID_Cases':'COVID_Cases_per_unit_area'},inplace=True)
+    
+    return cases_static_df
+
+def join_tranches_mobility_data(cases_all_weeks_df, deimos_footfall_df):
+    '''
+    Load the mobility data and join it to the static and cases dataframe
+    
+    :param cases_all_weeks_df: A dataframe containing static and cases data
+    :type cases_all_weeks_df: Pandas DataFrame
+    
+    :param deimos_footfall_df: A dataframe containing mobility data
+    :type deimos_footfall_df: Pandas DataFrame
+    
+    :return: A single dataframe containing static data, cases data and mobility data
+    :rtype: Pandas DataFrame
+    '''
+    
+    # drop the footfall columns that aren't used in the time tranches model
+    deimos_footfall_df.drop(['msoa_people', 'resident_footfall_sqkm', 'total_footfall_sqkm', 'visitor_footfall_sqkm', 'worker_footfall_sqkm'], axis=1, inplace=True)
+    
+    # convert date to string for joining 
+    deimos_footfall_df['Date'] = deimos_footfall_df['Date'].astype(str)
+    
+    # join mobility with the static and cases data
+    cases_mobility_all_weeks_df = cases_all_weeks_df.merge(deimos_footfall_df, how='inner', on=['LSOA11CD','Date'])
+    
+    return cases_mobility_all_weeks_df
+
+
+def derive_week_number(cases_static_df):
+    '''
+    Add a column to the data set which maps each week to a week number from the time
+    that the first data is available. The function also asserts that the number of LSOAs
+    in the data is equal to the number of LSOAs specified in the config file.
+    
+    :param cases_static_df: DataFrame containing the static data
+    :type cases_static_df: Pandas DataFrame
+    
+    :return: A dataframe with a column of week numbers
+    :rtype: Pandas DataFrame
+    '''
+    
+    # Sort the unique dates 
+    date_list = sorted(cases_static_df['Date'].dt.date.unique())
+
+    # assign a number of each week and append it as a string
+    week_list = ["week_" + str(x+1) for x in range(len(date_list))]
+
+    # create a dictionary of dates and their corresponding string
+    date_dict = dict(zip(date_list,week_list))
+
+    # create a new column in the static dataframe containing the mapping of dates to their week number
+    cases_static_df['week'] = cases_static_df['Date'].map(date_dict)
+    
+    # not sure why we do this, maybe drop?
+    cases_static_df['Date']=cases_static_df['Date'].astype(str)
+
+    # remove the index - again not sure why we do this
+    cases_static_df = cases_static_df.reset_index(drop=True)
+
+    # check that every LSOA is present in the data
+    assert cases_static_df.groupby('Date')['LSOA11CD'].count().unique() == cf.n_lsoa
+    
+    return cases_static_df
+
+
+def create_test_data(all_weeks_df, static_df, deimos_footfall_df):
+    '''
+    Create a test data set which contains records for which mobility data
+    is available but cases data is not available. 
+    
+    :param all_weeks_df: A DataFrame containing the static and cases data
+    :type all_weeks_df: Pandas DataFrame
+    
+    :param static_df: A DataFrame containing the static data only
+    :type static_df: Pandas DataFrame
+    
+    :param deimos_footfall_df: A DataFrame containing footfall data
+    :type deimos_footfall_df: Pandas DataFrame
+    
+    :return : A DataFrame on which to test the trained model
+    :rtype: Pandas DataFrame
+    '''
+    
+    # merge footfall with the static data
+    footfall_static_df = deimos_footfall_df.merge(static_df, how='inner', on=['LSOA11CD'])
+    
+    # find the max date for which cases data is avaiable
+    date_cutoff = all_weeks_df['Date'].max()
+    
+    # the test set contains only timestamps where footfall data is available, but not cases data
+    test_df = footfall_static_df[footfall_static_df['Date'] > date_cutoff].reset_index(drop=True)
+    
+    return test_df
+
+
+def create_time_tranches(all_weeks_df, 
+                         tranche_dates = cf.tranche_dates, 
+                         tranche_description = cf.tranche_description):
+    '''
+    Function to process all weeks of data into time tranches whose boundaries are
+    defined by a list of dates 'tranche_dates'. The 'all_weeks_df' dataframe is split
+    into individual time tranches dataframes between the boundary dates. Numeric features are 
+    then aggregated for each time tranche before the individual tranche dataframes are concatenated
+    into a single dataframe.
+
+    :param all_weeks_df: A dataframe containing all weeks of static, dynamic and cases data
+    :type all_weeks_df: Pandas DataFrame
+    
+    :param tranche_dates: A list of the boundary dates for the time tranches
+    :type tranche_dates: [str]
+    
+    :param tranche_description: A list containing a short description of the conditions in each time tranche
+    :type tranche_description: [str]
+    
+    :return: A dataframe containing features aggregated at time tranche level
+    :rtype: Pandas DataFrame
+    '''
+    
+    # list to store a dataframe for each tranche
+    tranche_dfs = []
+
+    # for each item in the list of tranche boundary dates
+    for i, date in enumerate(tranche_dates):
+        
+        # t1 is the selected date
+        t1 = date
+
+        # if i is the final element of the list
+        if i == len(tranche_dates) - 1:
+
+            # subset for all dates after t1
+            df_time = all_weeks_df[all_weeks_df['Date'] > t1]
+
+
+        # if i is not the final element of the list of dates
+        else:
+            
+            # t2 is the next date in the list
+            t2 = tranche_dates[i + 1]
+
+            # subset for all dates between t1 and t2
+            df_time = dt.create_time_slice(all_weeks_df, t1, t2)
+
+        # if the time tranche dataframe is not empty
+        if not df_time.empty:
+
+            # add a column describing the tranche
+            df_time.loc[:, 'tranche_desc'] = tranche_description[i]
+            
+            # append the dataframe to the list of individual tranche dataframes
+            tranche_dfs.append(df_time)
+
+    # Perform aggregation of predictors and target variable for each tranche
+    # Each tranche contains multiple weeks, aggregation results in mean of each of the numerical features
+    # In practice, the static features are the same for each week, so we are averaging footfall over the tranche
+    # Each individual tranche dataframe will have one unique record for each LSOA (because of averaging)
+    
+    tranche_dfs_agg = []
+
+    for df in tranche_dfs:
+
+        # make a copy of the dataframe
+        tranche_df = df.copy()
+                
+        # derive a string containing the date range of the tranche
+        date_range_string = str(tranche_df['Date'].min()) + '-' + str(tranche_df['Date'].max())
+
+        # drop the date column
+        tranche_df.drop('Date', axis=1, inplace=True) 
+        
+        # insert the date range string as a new date column
+        tranche_df['Date'] = date_range_string
+
+        # define columns to group by
+        group_by_cols = ['Date', 'LSOA11CD', 'tranche_desc', 'travel_cluster']
+
+        # compute the mean over each week in the tranche
+        tranche_df = tranche_df.groupby(group_by_cols).mean().reset_index()
+
+        # sort by LSOA code
+        tranche_df = tranche_df.sort_values(by='LSOA11CD').reset_index(drop=True)
+
+        # append the df to the list of aggregated dataframes
+        tranche_dfs_agg.append(tranche_df)
+
+    # stack each tranche into one dataframe
+    all_tranches_df = pd.concat(tranche_dfs_agg).reset_index(drop=True)
+
+    # convert date to string
+    all_tranches_df['Date'] = all_tranches_df['Date'].astype(str)
+    
+    return all_tranches_df
+
+
+def derive_tranche_order(all_tranches_df, tranche_description = cf.tranche_description):
+    '''
+    Create a nested dictionary of tranch dates, descriptions and order by tranche number.
+    Use the dictionary to create a new column 'tranche_order 'showing the tranche number 
+    that each record corresponds to.
+    
+    :param all_tranches_df: A dataframe containing data for all tranches
+    :type all_tranches_df: Pandas DataFrame
+    
+    :param tranche_description: A list containing a short description of the conditions in each time tranche
+    :type tranche_description: [str]
+    
+    :return: A dataframe with a 'tranche_order' column added
+    :rtype: Pandas DataFrame
+    '''
+
+    # find unique date range and tranche description combinations
+    df_key = all_tranches_df[['Date','tranche_desc']].drop_duplicates().reset_index(drop=True)
+
+    # put them into a dictionary
+    event_dict = dict(zip(df_key['Date'].values, df_key['tranche_desc'].values))
+
+    # list of integers from 1 to n_tranches inclusive 
+    tranche_order = list(range(1, cf.n_tranches + 1))
+
+    # zip the tranche descriptions and tranche numbers
+    event_order_dict = dict(zip(tranche_description, tranche_order))
+
+    # create new column for tranche number
+    all_tranches_df['tranche_order'] = all_tranches_df['tranche_desc'].map(event_order_dict)
+    
+    return all_tranches_df
+
+
+def convert_units(df, colname, factor, new_colname=None):
+    '''
+    Multiply a dataframe column by a factor and replace the original value
+    with the multiplied value. Rename the column to reflect the new units.
+    
+    :param df: A dataframe containing a column whose units should be multipled by
+    the user specified factor
+    :type df: Pandas DataFrame
+    
+    :param colname: The name of the column to be multiplied by the factor
+    :type colname: string
+    
+    :param factor: The factor that the contents of column 'colname' will be multiplied by
+    :type factor: float
+    
+    :param new_colname: The name with which to replace 'colname' to reflect the changed units
+    :type new_colname: string
+    
+    :return: A dataframe with the the transformation and column name change applied
+    :rtype: Pandas DataFrame
+    '''
+    
+    if new_colname:
+        
+        df[new_colname] = df[colname] * factor
+        
+        df.drop(colname, axis=1, inplace=True)
+    
+    else:
+        
+        df[colname] = df[colname] * factor
+        
+    return df
