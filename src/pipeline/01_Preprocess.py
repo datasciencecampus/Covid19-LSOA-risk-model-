@@ -32,9 +32,6 @@ static_df = pp.normalise_data(static_df, 'static')
 ethnicity_list = dt.get_ethnicities_list(static_df,subgroups=True)
 static_df = static_df.drop(columns=ethnicity_list) 
 
-# filter for LSOAs in England
-static_df = static_df[static_df.LSOA11CD.str.startswith('E')] 
-
 #fill 0s (NaNs exist in occupations where nobody works in them)
 static_df = static_df.fillna(0)  
 
@@ -60,7 +57,7 @@ if cf.model_type == "two_way_fixed_effects":
 
     # date filter due to join being changed to outer resulting in extraneous rows prior to the pandemic
     dynamic_df = dynamic_df[dynamic_df['Date'] >= '2020-10-04']
-
+    
     # Filter to England only
     dynamic_df = dynamic_df[dynamic_df.LSOA11CD.str.startswith('E')] 
     dynamic_df = dynamic_df.fillna(0)

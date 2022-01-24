@@ -382,9 +382,9 @@ class AllTranches(IData):
         self.name = "data"
     def create_dataframe(self):
         
-        table = cf.static_data_file
+        table = conf.static_data_file
     
-        query_static = f"SELECT * FROM `{tab}`"
+        query_static = f"SELECT * FROM `{table}`"
         query_job_static = super().client.query(
             query_static
         ) 
