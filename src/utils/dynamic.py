@@ -11,8 +11,6 @@ import matplotlib.pyplot as plt
 import string
 import math
 
-
-#import dash
 import pgeocode
 
 
@@ -24,23 +22,6 @@ from statsmodels.tsa.stattools import adfuller
 from statsmodels.graphics.tsaplots import plot_acf
 from statsmodels.graphics.tsaplots import plot_pacf
 from statsmodels.tsa.stattools import kpss
-
-
-
-# import matplotlib.pyplot as plt
-# plt.style.use('Solarize_Light2')
-# from mpl_toolkits.mplot3d import Axes3D
-# import seaborn as sns
-# import plotly.offline as py
-# py.init_notebook_mode()
-# import plotly.graph_objs as go
-# import plotly.express as px
-
-# #import dash_core_components as dcc
-# #import dash_html_components as html
-# from plotly.offline import iplot, init_notebook_mode
-# from matplotlib.pyplot import figure
-
 
 from statsmodels.tsa.stattools import adfuller
 
