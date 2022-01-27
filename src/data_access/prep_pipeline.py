@@ -121,8 +121,8 @@ def ffill_cumsum(df, col_list, sort_col='Date', group_col = 'LSOA11CD'):
     :param df: Input dataset, typically resulting from calls to read_data and other subsequent preprocessing functions.
     :type df: Pandas DataFrame
     
-    :param col_list: List of columns to perform forward fill on
-    :type col_list: List of strings
+    :param col_list: Column(s) to perform forward fill on
+    :type col_list: string, or list of strings
     
     :param sort_col: Column(s) by which to sort the dataframes prior to forward filling, defaults to 'Date'. 
     :type sort_col: string, or list of strings
@@ -137,11 +137,9 @@ def ffill_cumsum(df, col_list, sort_col='Date', group_col = 'LSOA11CD'):
     
     df.sort_values(by=sort_col, inplace=True)
     df.reset_index(drop=True, inplace=True)
-    df.replace(0, np.nan, inplace=True)
+    df[col_list].replace(0, np.nan, inplace=True)
     
     df[col_list] = df.groupby(group_col)[col_list].ffill().fillna(0).astype(float)
-    
-    df.fillna(0, inplace=True)
     
     return df
 

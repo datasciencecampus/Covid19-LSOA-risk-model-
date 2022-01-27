@@ -1,4 +1,3 @@
-# todo: create test tables for this and add this to the data factory
 read_data_table_dict =  {
      'static_test': ['unit_test_static_vars', 'unit_test_mid_year_lsoa', 'unit_test_mobility_clusters', 'unit_test_flow_to_work', 'unit_test_lsoa_2011']
     ,'dynamic_test': ['aggregated_tests_lsoa', 'lsoa_vaccinations', 'Deimos_trip_end_count', 'lsoa_daily_footfall']
@@ -56,4 +55,30 @@ static_columns = ['LSOA11CD', 'LSOA11NM', 'MSOA11CD', 'MSOA11NM', 'LTLA20CD', 'L
        'age_65_to_69', 'age_70_to_74', 'age_75_to_79', 'age_80_to_90_PLUS',
        'travel_cluster', 'care', 'meat_and_fish_processing', 'ready_meals',
        'textiles', 'warehousing', 'LSOA11NMW', 'geometry']
+
+# dictionary for testing the normalise_data function 
+normalise_dic = {
+     'key1' : ['col1', 'col2']
+    ,'key2': 'test'
+    ,'key3': {
+         'flag': 'test'
+        ,'by': ''
+        ,'suffix': ''
+        ,'columns':['col1', 'col2']
+    }
+    # this should be ignored
+    ,'key4': {
+         'flag': 'test2'
+        ,'by': ''
+        ,'suffix': ''
+        ,'columns':['col2', 'col3']
+    }
+    # col3 and 4 should remain untouched, with new _test columns created
+    ,'key5': {
+         'flag': 'test'
+        ,'by': 'std'
+        ,'suffix': '_test'
+        ,'columns':['col3', 'col4']
+    }
+}
 
