@@ -159,25 +159,18 @@ def sum_features(df, dic = cf.static_cols_to_sum):
     :return: A dataframe with new summed features added and the individual feature columns removed
     :rtype: Pandas DataFrame
     '''
-    
+
     # create a copy of the DataFrame
     df_copy = df.copy()
     
     # for each new column, and list of columns to sum
     for new_col, cols_to_sum in dic.items():
-    
-        # create the new column and populate with zeroes
-        df_copy[new_col] = 0
-
-        # for each item in the list of columns to sum
-        for col_to_sum in cols_to_sum:
-
-            # add its value to the new column
-            df_copy[new_col] = df_copy[new_col] + df_copy[col_to_sum]
-            
-            # drop the original column
-            df_copy.drop(col_to_sum, inplace=True, axis=1)
         
+        df_copy[new_col] = df_copy[cols_to_sum].sum(axis=1)
+        
+        # drop original columns
+        df_copy.drop(columns=cols_to_sum, inplace=True)
+    
     return df_copy
 
 def apply_timelag(dynamic_df, dynamic_df_norm):

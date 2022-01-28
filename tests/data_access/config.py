@@ -82,3 +82,9 @@ normalise_dic = {
     }
 }
 
+# dictionary for testing the sum_features column
+
+sum_dic = {'newcol':['col1', 'col2']
+        ,'newcol2':['col3', 'col4', 'col5']
+       }
+
