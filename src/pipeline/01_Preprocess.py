@@ -98,6 +98,9 @@ if cf.model_type == "two_way_fixed_effects":
 # pre-processing for time tranches model
 if cf.model_type == "time_tranche":
     
+    # the time tranches model doesn't need any further normalisation by population
+    static_df.drop('ALL_PEOPLE', axis=1, inplace=True)
+    
     print("Joining cases data...")
         
     # join cases to the static data

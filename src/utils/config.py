@@ -5,7 +5,7 @@ data_start_date = "'2020-04-01'"  #date to select data from
 
 model_start_date = "2021-01-01" #date to begin modelling
 
-model_type = "time_tranche"
+model_type = "two_way_fixed_effects"
 
 geography_dict = {'region':'RGN19NM',
               'travel_cluster':'travel_cluster',
@@ -305,8 +305,7 @@ static_col_drop = ['BAME_PROP',
  'age_70_to_74', 
  'age_75_to_79',
  'age_80_to_90_PLUS',
- 'warehousing_manc_def',
- 'ALL_PEOPLE']
+ 'warehousing_manc_def']
 
 # User inputs the location of data they wish to use 
 data_location_big_query = {}
