@@ -107,7 +107,7 @@ if cf.model_type == "two_way_fixed_effects":
     df_final = pp.apply_timelag(dynamic_df, dynamic_df_norm)
     
 # pre-processing for time tranches model
-if cf.model_type == "time_tranche":
+elif cf.model_type == "time_tranche":
     
     print("Joining cases data...")
         
