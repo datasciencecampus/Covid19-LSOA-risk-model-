@@ -125,14 +125,13 @@ class DataFactory:
                 query = f"SELECT * FROM `{table}`"
                 return NoProcessing(query)  
             if data_name == 'tranche_residuals':
-                table == conf.tranche_residuals_gbq_loc
+                table = conf.tranche_residuals_gbq_loc
                 query = f"SELECT * FROM `{table}`"
                 return NoProcessing(query)  
             if data_name == 'tranche_latest_predictions':
                 table = conf.tranche_latest_predictions_gbq_loc
                 query = f"SELECT * FROM `{table}`"
-                return NoProcessing(query)    
-            
+                return NoProcessing(query)
             raise Exception('Data Class Not Found')
         except Exception as _e:
             print(_e)
