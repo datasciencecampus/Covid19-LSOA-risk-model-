@@ -14,8 +14,6 @@ from data_access import prep_pipeline as pp
 from utils import data as dt
 from utils import config as cf
 
-#############################
-
 print("Loading static data from BigQuery...")
 
 # read in static data
@@ -23,6 +21,7 @@ static_df = pp.read_data('static')
 
 print("Processing static data...")
 
+# merge geography polygon data to find LSOA areas
 static_df = pp.geo_merge(static_df)
 
 # normalise static data
@@ -32,7 +31,7 @@ static_df = pp.normalise_data(static_df, 'static')
 ethnicity_list = dt.get_ethnicities_list(static_df,subgroups=True)
 static_df = static_df.drop(columns=ethnicity_list) 
 
-#fill 0s (NaNs exist in occupations where nobody works in them)
+#fill 0s (NaNs exist for industries in which zero residents of a given LSOA work)
 static_df = static_df.fillna(0)  
 
 static_df.drop(columns=cf.static_col_drop, inplace=True)
@@ -65,7 +64,6 @@ if cf.model_type == "two_way_fixed_effects":
     dynamic_df['Country'] = 'England'
 
     # Normalise population by a common geography so lag values in following code can be calculated correctly
-    # need to rethink these names
     lag_granularity = cf.chosen_granularity_for_lag
     dynamic_df_norm = dynamic_df.copy()
 
@@ -85,25 +83,16 @@ if cf.model_type == "two_way_fixed_effects":
 
     # normalise the original dynamic df
     dynamic_df = pp.normalise_data(dynamic_df, 'dynamic')
-
     dynamic_df = pp.ffill_cumsum(dynamic_df, cf.ffill_cols['dynamic'])
 
-    # TODO: rename columns (or change subsequent code to use the new ones...)
-    # also think of better suffix for these columns
-
-    # rename columns to be in line with old code 
-    # may want to remove this later
     dynamic_df.drop(columns=cf.dynamic_col_drop, inplace=True)
     dynamic_df.rename(columns=cf.dynamic_rename, inplace=True)
 
-
+    # write results to BigQuery
     dynamic_df.to_gbq(cf.dynamic_data_file, project_id=cf.project_name, if_exists='replace')
     dynamic_df_norm.to_gbq(cf.dynamic_data_file_normalised, project_id=cf.project_name, if_exists='replace')
 
-    ########################
-    # lag section
-    # writing to gbq is included in the function
-
+    # apply the calculated time lag
     df_final = pp.apply_timelag(dynamic_df, dynamic_df_norm)
     
 # pre-processing for time tranches model
