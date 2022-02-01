@@ -304,7 +304,9 @@ static_col_drop = ['BAME_PROP',
  'age_65_to_69', 
  'age_70_to_74', 
  'age_75_to_79',
- 'age_80_to_90_PLUS']
+ 'age_80_to_90_PLUS',
+ 'warehousing_manc_def',
+ 'ALL_PEOPLE']
 
 # User inputs the location of data they wish to use 
 data_location_big_query = {}
@@ -330,6 +332,15 @@ lagged_dynamic_non_stationary = 'review_ons.time_lagged_dynamic_data_deimos_cums
 
 tranches_model_input_processed = 'review_ons.tranches_model_input_processed'
 tranches_model_test_data = 'review_ons.tranches_model_test_data'
+
+tranche_coefs_regularisation = 'review_ons.tranches_coefs_regularisation'
+tranche_coefs_standardised = 'review_ons.tranche_coefs_standardised'
+tranche_coefs_non_standardised = 'review_ons.tranche_coefs_non_standardised'
+
+dashboard_tranche_coefs_regularisation = 'review_ons.dashboard_tranche_reg_coefs'
+dashboard_tranche_coefs_standardised = 'review_ons.dashboard_tranche_non_reg_std_coefs'
+dashboard_tranche_coefs_non_standardised = 'review_ons.dashboard_tranche_non_reg_non_std_coefs'
+dashboard_feature_spatial_dist = 'review_ons.dashboard_tranche_model_features'
 
 # zero-inflated model training
 zero_infltd_modl=False
@@ -397,9 +408,9 @@ feature_pretty_names = {
                        'METHOD_OF_TRAVEL_TO_WORK_NON_MOTORISED':'Commute Method - Non Motorised',
                        'families_with_dependent_children_no_dependent_children':'No Dependent Children',
                        'FAMILIES_WITH_DEPENDENT_CHILDREN_NO_DEPENDENT_CHILDREN':'No Dependent Children',
-                       'care_homes_warehousing_textiles':'Care, Warehouse, Textiles Workers',
+                       'care_homes_warehousing':'Care, Warehousing Workers',
                        'meat_and_fish_processing':'Meat & Fish Processing Workers',
-                       'ready_meals':'Ready Meals Workers',
+                       'ready_meals_textiles':'Ready Meals & Textile Workers',
                        'worker_visitor_footfall_sqm':'Worker Visitor Footfall',
     
                         # quintiles
@@ -417,9 +428,10 @@ feature_pretty_names = {
                        'FAMILIES_WITH_DEPENDENT_CHILDREN_NO_DEPENDENT_CHILDREN_quint':'No Dependent Children Quintile',
                        'METHOD_OF_TRAVEL_TO_WORK_NON_MOTORISED_quint':'Commute Method - Non Motorised Quintile',
                        'meat_and_fish_processing_quint':'Meat & Fish Processing Workers Quintile',
-                       'care_homes_warehousing_textiles_quint':'Care, Warehouse, Textiles Workers Quintile',
+                       'care_homes_warehousing_quint':'Care, Warehousing Workers Quintile',
                        'worker_visitor_footfall_sqm_quint':'Worker Visitor Footfall Quintile',
-                        
+                       'ready_meals_textiles_quint':'Ready Meals & Textile Workers Quintile',
+    
                         # ready meals rank
                        'ready_meals_rank':'Ready Meals Workers Rank'
                          }
@@ -439,13 +451,9 @@ tc_short_names = {'L1. >70% metropolitan core dwellers':'Metro Core',
                   'L5. >70% rural dwellers':'Rural'}
 
 
-# BigQuery table locations    
-tranche_regularised_coefs_gbq_loc = 'wip.multi_grp_coef_no_zir_static_dynamic_tranches'
-tranche_non_reg_stf_coefs_gbq_loc = 'wip.multi_grp_se_coef_no_zir_static_dynamic_tranches'
-tranche_non_reg_non_std_coefs_gbq_loc = 'wip.multi_grp_non_se_coef_no_zir_static_dynamic_tranches'
+# # BigQuery table locations    
 tranche_residuals_gbq_loc = 'wip.multi_grp_pred_no_zir_static_dynamic_tranches'
 tranche_latest_predictions_gbq_loc = 'wip.multi_grp_pred_test_data_no_zir_static_dynamic_tranches'
-tranche_model_features_gbq_loc = 'review_ons.tranche_model_features'
 
 # whether to use linear regression or regression with regularisation for prediction
 linear_rgr_flg=False
