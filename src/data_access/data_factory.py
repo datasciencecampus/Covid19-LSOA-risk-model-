@@ -93,17 +93,35 @@ class DataFactory:
             if data_name == 'dynamic_raw_norm_chosen_geo':
                 table = conf.dynamic_data_file_normalised
                 query = f"SELECT * FROM `{table}`" #created in create_dynamic, used in apply_timelag
-                return NoProcessing(query)      
+                return NoProcessing(query)     
+            
+            # tranches model inputs
+            if data_name == 'tranche_model_input':
+                table = conf.tranches_model_input_processed
+                query = f"SELECT * FROM {table}"
+                return NoProcessing(query)
+            if data_name == 'tranche_model_test_data':
+                table = conf.tranches_model_test_data
+                query = f"SELECT * FROM {table}"
+                return NoProcessing(query)
+            
+            # processed static data for both models
+            if data_name == 'static_features':
+                table = conf.static_data_file
+                query = f"SELECT * FROM {table}"
+                return NoProcessing(query)
+            
+            # outputs of time tranches model
             if data_name == 'tranche_regularised_coefs':
-                table = conf.tranche_regularised_coefs_gbq_loc
+                table = conf.tranche_coefs_regularisation
                 query=f"SELECT * FROM `{table}`"
                 return NoProcessing(query)
             if data_name == 'tranche_non_reg_std_coefs':
-                table = conf.tranche_non_reg_std_coefs_gbq_loc
+                table = conf.tranche_coefs_standardised
                 query = f"SELECT * FROM `{table}`"
                 return NoProcessing(query)
             if data_name == 'tranche_non_reg_non_std_coefs':
-                table = conf.tranche_non_reg_non_std_coefs_gbq_loc
+                table = conf.tranche_coefs_non_standardised
                 query = f"SELECT * FROM `{table}`"
                 return NoProcessing(query)  
             if data_name == 'tranche_residuals':
@@ -113,11 +131,8 @@ class DataFactory:
             if data_name == 'tranche_latest_predictions':
                 table = conf.tranche_latest_predictions_gbq_loc
                 query = f"SELECT * FROM `{table}`"
-                return NoProcessing(query)      
-            if data_name == 'tranche_model_features':
-                table = conf.tranche_model_features_gbq_loc
-                query = f"SELECT * FROM `{table}`"
-                return NoProcessing(query)      
+                return NoProcessing(query)    
+            
             raise Exception('Data Class Not Found')
         except Exception as _e:
             print(_e)
