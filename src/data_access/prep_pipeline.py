@@ -173,7 +173,7 @@ def sum_features(df, dic = cf.static_cols_to_sum):
     
     return df_copy
 
-def apply_timelag(dynamic_df, dynamic_df_norm):
+def apply_timelag(dynamic_df, dynamic_df_norm, save_results=True):
     '''
     Calculate appropriate time lag values to use and apply to dynamic dataset.
     
@@ -182,6 +182,9 @@ def apply_timelag(dynamic_df, dynamic_df_norm):
     
     :param dynamic_df_norm: normalised dynamic dataframe as produced by the dynamic dataset preprocessing, also accessed through DataFactory.get('dynamic_raw_norm_chosen_geo').create_dataframe().
     :type dynamic_df: Pandas DataFrame
+    
+    :param save_results: whether to save output to GCP or not, default True
+    :type save_results: boolean
     
     :return: Dataframe ready for modelling
     :rtype: Pandas DataFrame
@@ -296,12 +299,14 @@ def apply_timelag(dynamic_df, dynamic_df_norm):
                 "cumsum_divided_area":"COVID_Cases_per_unit_area_cumsum",
                 "pct_infected_all_time":"COVID_Cases_prop_population_cumsum"})
     
-    if flg_stnrty_both:
-        dynamic_df_lagged_merged.to_gbq(cf.lagged_dynamic_stationary,\
-                               project_id = cf.project_name,if_exists='replace')
-    else:
-        dynamic_df_lagged_merged.to_gbq(cf.lagged_dynamic_non_stationary,\
-                                                 project_id=cf.project_name,if_exists='replace')
+    if save_results:
+
+        if flg_stnrty_both:
+            dynamic_df_lagged_merged.to_gbq(cf.lagged_dynamic_stationary,\
+                                   project_id = cf.project_name,if_exists='replace')
+        else:
+            dynamic_df_lagged_merged.to_gbq(cf.lagged_dynamic_non_stationary,\
+                                                     project_id=cf.project_name,if_exists='replace')
     
     return dynamic_df_lagged_merged
 

@@ -95,3 +95,25 @@ def test_sum_features():
     df = pp.sum_features(df, dic = cf.sum_dic)
     
     pd.testing.assert_frame_equal(df, df_result)
+    
+def test_apply_timelag():
+    # input dataframes
+    dynamic_df = factory.get('unit_test_timelag_dynamic').create_dataframe()
+    dynamic_df_norm = factory.get('unit_test_timelag_dynamic_norm').create_dataframe()
+    
+    # target dataframe
+    df_result = factory.get('unit_test_timelag_result').create_dataframe()
+    
+    df = pp.apply_timelag(dynamic_df, dynamic_df_norm, save_results=False)
+    
+    # fix datatypes and order of two dataframes is the same to ensure comparison
+    df['Date'] = df['Date'].apply(lambda x: x.replace(tzinfo=None))
+    df_result['Date'] = df_result['Date'].apply(lambda x: x.replace(tzinfo=None))
+    
+    df.sort_values(by=['LSOA11CD', 'Date'], inplace=True)
+    df.reset_index(drop=True, inplace=True)
+    
+    df_result.sort_values(by=['LSOA11CD', 'Date'], inplace=True)
+    df_result.reset_index(drop=True, inplace=True)
+    
+    pd.testing.assert_frame_equal(df, df_result)
