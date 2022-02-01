@@ -238,5 +238,133 @@ def dynamic_model(str_coef_tc_static,
     return str_coef_tc_dynamic, str_coef_tc_dynamic_ci
 
 
+def tranches_model(lin_regr_or_regrlsn = cf.linear_rgr_flg,
+                   alphas_val = cf.alphas_val, 
+                   parm_spce_grid_srch = cf.parm_spce_grid_srch,
+                   zero_inf_flg_st = cf.zero_infltd_modl,
+                   save_results = True):
+    
+    """
+    Loads training and test data from BigQuery, runs a regression model for each time tranche of
+    each travel cluster. Results are output in the form of three dataframes:
+    
+    1) Coefficient estimates for linear regression with regularisation
+    2) Standardised coefficient estimates for linear regression without regularisation
+    3) Non-standardised coefficient estimates for linear regression without regularisation
+    
+    :param lin_regr_of_regrlsn: Flag for whether to use ElasticNet or Linear Regression for prediction.
+    Default is False which returns predictions from the ElasticNet model.
+    :type: bool
+    
+    :param alphas_val: List of alphas for cross-validation. Default is np.logspace(-3, 3, 101), set in config file.
+    :type alphas_val: Numpy array
+    
+    :param parm_spce_grid_srch: Number of different combinations to use in grid search for hyperparameters. Default is 500, set in config file.
+    :type parm_spce_grid_srch: int
+    
+    :param zero_inf_flg_st: Whether to use zero-inflated regressor model. Default to False, set in config.
+    :type zero_inf_flg_st: bool
+    
+    :param save_results: Flag for whether to output results to tables or not. Default True.
+    :type: bool
 
+    :return: Three dataframes as described earlier in this docstring
+    :rtype: Pandas DataFrames
+    """
+    
+    # import data sets from BigQuery
+    df_all_tranches_sbset = factory.get('tranche_model_input').create_dataframe()
+    df_all_tranches_sbset_tst_data = factory.get('tranche_model_test_data').create_dataframe()
+    
+    # list the travel clusters
+    list_of_tc = sorted(df_all_tranches_sbset['travel_cluster'].unique())
 
+    #Store the outputs
+    str_pred_tc_static=[]
+    str_coef_tc_static=[]
+    str_se_coef_tc_static=[]
+    str_non_se_coef_tc_static=[]
+    str_pred_tc_recnt=[]
+    
+    
+    for sbset_tc in list_of_tc:
+        print(sbset_tc)
+        
+        df_chsen=df_all_tranches_sbset[df_all_tranches_sbset['travel_cluster']==sbset_tc].reset_index(drop=True)
+
+        df_chsen=df_chsen.sort_values(by=['tranche_order','LSOA11CD']).reset_index(drop=True)
+        df_chsen=df_chsen[[x for x in df_chsen.columns if x not in ['tranche_desc','Date']]]
+
+        pred_tc, coef_tc, se_tc, non_se_tc, pred_tst_tc = md.fit_model_tranche_static_dynamic(lin_regr_or_regrlsn,
+                                                                                          df_chsen,
+                                                                                          zero_inf_flg_st,
+                                                                                          alphas_val,
+                                                                                          parm_spce_grid_srch,
+                                                                                          df_all_tranches_sbset_tst_data)
+        
+        
+        str_pred_tc_static.append(pred_tc)
+        str_coef_tc_static.append(coef_tc) 
+        str_se_coef_tc_static.append(se_tc)
+        str_non_se_coef_tc_static.append(non_se_tc)
+        str_pred_tc_recnt.append(pred_tst_tc)
+        
+    # Store most important features used for making predictions 
+    # for each travel cluster and for each tranche
+    # This includes both significant and non-significant features
+    str_coef_tc_static=pd.concat(str_coef_tc_static).reset_index()
+
+    # store the standard error/p-value of the coefficients of trained model - standardised coefs
+    str_se_coef_tc_static = pd.concat(str_se_coef_tc_static).reset_index()
+
+    # store the standard error/p-value of the coefficients of trained model
+    str_non_se_coef_tc_static = pd.concat(str_non_se_coef_tc_static).reset_index()
+
+    # time tranches model is used for generating coefficient estimates
+    # only consider the dataframes of coefficients. Predicsions and residuals will be dealt with by the two-way fixed effects model
+    result_dfs = [str_coef_tc_static, str_se_coef_tc_static, str_non_se_coef_tc_static]
+
+    # derive a lookup table of dates to tranche numbers to tranche description
+    df_tranche_date_lookup = df_all_tranches_sbset[['Date','tranche_desc']].drop_duplicates().reset_index(drop=True)
+    tranche_description = cf.tranche_description
+
+    event_dict = dict(zip(df_tranche_date_lookup['Date'].values, df_tranche_date_lookup['tranche_desc'].values))
+    tranche_order = list(range(1, cf.n_tranches + 1))
+
+    # store as dictionaries so that they can be mapped to dataframe columns later
+    event_order_dict = dict(zip(tranche_description, tranche_order))
+    rvse_event_dict = {v: k for k, v in event_order_dict.items()}
+    rvse_date_dict = {v: k for k, v in event_dict.items()}
+    
+    # populate columns using the dictionaries created above
+    for df in result_dfs:
+        df['Date'] = df['tranche'].map(rvse_event_dict).map(rvse_date_dict)
+        df['tranche_desc'] = df['tranche'].map(rvse_event_dict)
+        df['Features'] = df['Features'].str.lower()
+     
+    # rename columns for legibility
+    str_se_coef_tc_static.rename(columns={'coef':'standardised_coef',
+                                          'P>|t|':'P_value',
+                                          '[0.025':'lower_bound',
+                                          '0.975]':'upper_bound',
+                                          'std err':'std_err'}, inplace=True)
+    
+    str_non_se_coef_tc_static.rename(columns={'P>|t|':'P_value',
+                                              '[0.025':'lower_bound',
+                                              '0.975]':'upper_bound',
+                                              'std err':'std_err'}, inplace=True)
+    
+    if save_results:
+
+        # write out the results to BigQuery
+        str_coef_tc_static.to_gbq(cf.tranche_coefs_regularisation, project_id=cf.project_name, if_exists='replace')
+        str_se_coef_tc_static.to_gbq(cf.tranche_coefs_standardised, project_id=cf.project_name, if_exists='replace')
+        str_non_se_coef_tc_static.to_gbq(cf.tranche_coefs_non_standardised, project_id=cf.project_name, if_exists='replace')
+
+    return str_coef_tc_static, str_se_coef_tc_static, str_non_se_coef_tc_static
+    
+    
+    
+    
+    
+    
