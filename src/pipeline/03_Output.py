@@ -75,9 +75,9 @@ df_features_pivot = df_features_pivot[df_features_pivot['Features'].str.contains
 
 
 # Write to BigQuery
-df_reg_coefs.to_gbq('review_ons.dashboard_tranche_reg_coefs', project_id = cf.project_name, if_exists = 'replace')
-df_non_reg_std_coefs.to_gbq('review_ons.dashboard_tranche_non_reg_std_coefs', project_id = cf.project_name, if_exists = 'replace')
-df_non_reg_non_std_coefs.to_gbq('review_ons.dashboard_tranche_non_reg_non_std_coefs', project_id = cf.project_name, if_exists = 'replace')
+df_reg_coefs.to_gbq(cf.dashboard_tranche_coefs_regularisation, project_id = cf.project_name, if_exists = 'replace')
+df_non_reg_std_coefs.to_gbq(cf.dashboard_tranche_coefs_standardised, project_id = cf.project_name, if_exists = 'replace')
+df_non_reg_non_std_coefs.to_gbq(cf.dashboard_tranche_coefs_non_standardised, project_id = cf.project_name, if_exists = 'replace')
 df_pred_residuals.to_gbq('review_ons.dashboard_tranche_residuals', project_id = cf.project_name, if_exists = 'replace')
 df_latest_pred.to_gbq('review_ons.dashboard_tranche_latest_preds', project_id = cf.project_name, if_exists = 'replace')
-df_features_pivot.to_gbq('review_ons.dashboard_tranche_model_features', project_id = cf.project_name, if_exists = 'replace')
+df_features_pivot.to_gbq(cf.dashboard_feature_spatial_dist, project_id = cf.project_name, if_exists = 'replace')
