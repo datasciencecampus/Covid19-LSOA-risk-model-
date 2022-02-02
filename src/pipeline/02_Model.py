@@ -12,7 +12,7 @@ from utils import config as cf
 # for the purposes of testing, separate the two out using the config file
 # when ready for production, remove this distinction. We want to run both models at the same time.
 
-if cf.model_type == "twfe":
+if cf.model_type == "two_way_fixed_effects":
     
     str_coef_tc_static, str_coef_tc_static_ci = mw.static_model()
 
