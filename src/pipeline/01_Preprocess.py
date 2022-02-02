@@ -39,9 +39,6 @@ static_df.drop(columns=cf.static_col_drop, inplace=True)
 # # combine the flow to work columns from factor analysis
 static_df = pp.sum_features(static_df)
 
-# save to wip file
-static_df.to_gbq(cf.static_data_file, project_id=cf.project_name,if_exists='replace')
-
 # pre-processing for the two way fixed effects model
 if cf.model_type == "two_way_fixed_effects":
     
@@ -99,12 +96,12 @@ if cf.model_type == "two_way_fixed_effects":
 if cf.model_type == "time_tranche":
     
     # the time tranches model doesn't need any further normalisation by population
-    static_df.drop('ALL_PEOPLE', axis=1, inplace=True)
+    static_df_dropped = static_df.drop('ALL_PEOPLE', axis=1)
     
     print("Joining cases data...")
         
     # join cases to the static data
-    cases_all_weeks_df = pp.join_cases_to_static_data(static_df)
+    cases_all_weeks_df = pp.join_cases_to_static_data(static_df_dropped)
     
     # generate a 'week number' column
     cases_all_weeks_df = pp.derive_week_number(cases_all_weeks_df)
@@ -134,7 +131,7 @@ if cf.model_type == "time_tranche":
                                                        factor = 0.01)
     
     # generate the test data set - weeks for which we have mobility data but no cases data
-    test_df = pp.create_test_data(cases_mobility_all_weeks_df, static_df, deimos_footfall_df)
+    test_df = pp.create_test_data(cases_mobility_all_weeks_df, static_df_dropped, deimos_footfall_df)
     
     print("Organising the data into time tranches...")
     
@@ -152,4 +149,12 @@ if cf.model_type == "time_tranche":
         
 else:
     raise ValueError('The ''model_type'' provided in the config file is invalid. See config file for options.')
+    
+
+# drop columns for the version of the file that will be picked up by 'AllTranches' in the TWFE modelling phase
+static_df.drop(['Area','ALL_PEOPLE'], axis=1, inplace=True)
+
+# write to BigQuery
+static_df.to_gbq(cf.static_data_file, project_id=cf.project_name,if_exists='replace')
+
     
