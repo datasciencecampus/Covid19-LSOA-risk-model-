@@ -9,6 +9,8 @@ import pandas_gbq
 current_path = os.path.abspath('.')
 sys.path.append(os.path.dirname(current_path))
 
+sys.path.append('/home/jupyter/Covid19-LSOA-risk-model-/src')
+
 from data_access.data_factory import DataFactory as factory
 from data_access import prep_pipeline as pp
 from utils import data as dt
