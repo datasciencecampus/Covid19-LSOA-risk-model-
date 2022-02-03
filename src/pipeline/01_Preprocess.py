@@ -9,6 +9,8 @@ import pandas_gbq
 current_path = os.path.abspath('.')
 sys.path.append(os.path.dirname(current_path))
 
+sys.path.append(current_path + '/src')
+
 from data_access.data_factory import DataFactory as factory
 from data_access import prep_pipeline as pp
 from utils import data as dt
@@ -107,7 +109,7 @@ if cf.model_type == "two_way_fixed_effects":
     df_final = pp.apply_timelag(dynamic_df, dynamic_df_norm)
     
 # pre-processing for time tranches model
-if cf.model_type == "time_tranche":
+elif cf.model_type == "time_tranche":
     
     print("Joining cases data...")
         

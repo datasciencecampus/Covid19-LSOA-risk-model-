@@ -117,7 +117,11 @@ class DataFactory:
             if data_name == 'tranche_model_features':
                 table = conf.tranche_model_features_gbq_loc
                 query = f"SELECT * FROM `{table}`"
-                return NoProcessing(query)      
+                return NoProcessing(query)  
+            # fetch static data for unit tests
+            if data_name.startswith('unit_test'):
+                query = f"SELECT * FROM {'wip.' + data_name}"
+                return NoProcessing(query)
             raise Exception('Data Class Not Found')
         except Exception as _e:
             print(_e)
