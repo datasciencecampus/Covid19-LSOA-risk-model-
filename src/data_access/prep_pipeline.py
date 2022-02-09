@@ -61,15 +61,15 @@ def read_data(table_type, table_dict = cf.data_tables, join_col = 'LSOA11CD', en
 
 def geo_merge(df, geo_col = 'geometry'):
     '''
-    Add on geographic information with an 'Area' column, and combine intermediate travel clusters. 
+    Calculate the area of a geometry column in a dataframe and add to the dataframe as an 'Area' column.
     
-    :param df: Input dataframe, from read_data function. Requires 'travel_cluster' column for travel cluster grouping function.
+    :param df: Input dataframe, from read_data function
     :type df: Pandas DataFrame
     
-    :param geo_col: Name of column from which to calculate the area
-    :type geo_col: string
+    :param geo_col: Name of column from which to calculate the area. This column must have a geometry dtype. 
+    :type geo_col: str
     
-    :return: DataFrame with Area and combined and renamed travel cluster groupings
+    :return: DataFrame with Area
     :rtype: Pandas DataFrame
     
     '''
@@ -78,9 +78,6 @@ def geo_merge(df, geo_col = 'geometry'):
     gdf = gpd.GeoDataFrame(df, crs="EPSG:27700", geometry=df[geo_col])
     gdf.crs
     gdf['Area'] = gdf[geo_col].area/10**6
-
-    # combine and rename travel clusters 
-    df = dt.combining_and_remap_travel_cluster(gdf)
     
     return df
 
@@ -124,8 +121,8 @@ def ffill_cumsum(df, col_list, sort_col='Date', group_col = 'LSOA11CD'):
     :param df: Input dataset, typically resulting from calls to read_data and other subsequent preprocessing functions.
     :type df: Pandas DataFrame
     
-    :param col_list: List of columns to perform forward fill on
-    :type col_list: List of strings
+    :param col_list: Column(s) to perform forward fill on
+    :type col_list: string, or list of strings
     
     :param sort_col: Column(s) by which to sort the dataframes prior to forward filling, defaults to 'Date'. 
     :type sort_col: string, or list of strings
@@ -140,11 +137,9 @@ def ffill_cumsum(df, col_list, sort_col='Date', group_col = 'LSOA11CD'):
     
     df.sort_values(by=sort_col, inplace=True)
     df.reset_index(drop=True, inplace=True)
-    df.replace(0, np.nan, inplace=True)
+    df[col_list].replace(0, np.nan, inplace=True)
     
     df[col_list] = df.groupby(group_col)[col_list].ffill().fillna(0).astype(float)
-    
-    df.fillna(0, inplace=True)
     
     return df
 
@@ -164,28 +159,21 @@ def sum_features(df, dic = cf.static_cols_to_sum):
     :return: A dataframe with new summed features added and the individual feature columns removed
     :rtype: Pandas DataFrame
     '''
-    
+
     # create a copy of the DataFrame
     df_copy = df.copy()
     
     # for each new column, and list of columns to sum
     for new_col, cols_to_sum in dic.items():
-    
-        # create the new column and populate with zeroes
-        df_copy[new_col] = 0
-
-        # for each item in the list of columns to sum
-        for col_to_sum in cols_to_sum:
-
-            # add its value to the new column
-            df_copy[new_col] = df_copy[new_col] + df_copy[col_to_sum]
-            
-            # drop the original column
-            df_copy.drop(col_to_sum, inplace=True, axis=1)
         
+        df_copy[new_col] = df_copy[cols_to_sum].sum(axis=1)
+        
+        # drop original columns
+        df_copy.drop(columns=cols_to_sum, inplace=True)
+    
     return df_copy
 
-def apply_timelag(dynamic_df, dynamic_df_norm):
+def apply_timelag(dynamic_df, dynamic_df_norm, save_results=True):
     '''
     Calculate appropriate time lag values to use and apply to dynamic dataset.
     
@@ -194,6 +182,9 @@ def apply_timelag(dynamic_df, dynamic_df_norm):
     
     :param dynamic_df_norm: normalised dynamic dataframe as produced by the dynamic dataset preprocessing, also accessed through DataFactory.get('dynamic_raw_norm_chosen_geo').create_dataframe().
     :type dynamic_df: Pandas DataFrame
+    
+    :param save_results: whether to save output to GCP or not, default True
+    :type save_results: boolean
     
     :return: Dataframe ready for modelling
     :rtype: Pandas DataFrame
@@ -308,12 +299,14 @@ def apply_timelag(dynamic_df, dynamic_df_norm):
                 "cumsum_divided_area":"COVID_Cases_per_unit_area_cumsum",
                 "pct_infected_all_time":"COVID_Cases_prop_population_cumsum"})
     
-    if flg_stnrty_both:
-        dynamic_df_lagged_merged.to_gbq(cf.lagged_dynamic_stationary,\
-                               project_id = cf.project_name,if_exists='replace')
-    else:
-        dynamic_df_lagged_merged.to_gbq(cf.lagged_dynamic_non_stationary,\
-                                                 project_id=cf.project_name,if_exists='replace')
+    if save_results:
+
+        if flg_stnrty_both:
+            dynamic_df_lagged_merged.to_gbq(cf.lagged_dynamic_stationary,\
+                                   project_id = cf.project_name,if_exists='replace')
+        else:
+            dynamic_df_lagged_merged.to_gbq(cf.lagged_dynamic_non_stationary,\
+                                                     project_id=cf.project_name,if_exists='replace')
     
     return dynamic_df_lagged_merged
 
