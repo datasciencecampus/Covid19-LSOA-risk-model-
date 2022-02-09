@@ -32,6 +32,41 @@ def test_read_data_static():
     
     pd.testing.assert_frame_equal(static_result, static_df)
     
+# read in dynamic test data to use in following two tests
+@pytest.fixture
+def dynamic_result():
+    dynamic_df = factory.get('unit_test_dynamic').create_dataframe()
+    
+    return dynamic_df
+
+# test default behaviour of read_data 
+def test_read_data_dynamic_eng(dynamic_result):
+    dynamic_df = pp.read_data('dynamic_test', table_dict = cf.read_data_table_dict, join_col=['LSOA11CD', 'Date'])
+    
+    dynamic_result = dynamic_result[dynamic_result['LSOA11CD'].str.startswith('E')]
+    
+    # sort to allow comparison
+    dynamic_result.sort_values(by=['LSOA11CD', 'Date'], inplace=True)
+    dynamic_result.reset_index(drop=True, inplace=True)
+
+    dynamic_df.sort_values(by=['LSOA11CD', 'Date'], inplace=True)
+    dynamic_df.reset_index(drop=True, inplace=True)
+    
+    pd.testing.assert_frame_equal(dynamic_result, dynamic_df)
+
+# test England filter works as expected
+def test_read_data_dynamic_all(dynamic_result):
+    dynamic_df = pp.read_data('dynamic_test', table_dict = cf.read_data_table_dict, join_col=['LSOA11CD', 'Date'], england_only=False)
+    
+    # sort to allow comparison
+    dynamic_result.sort_values(by=['LSOA11CD', 'Date'], inplace=True)
+    dynamic_result.reset_index(drop=True, inplace=True)
+
+    dynamic_df.sort_values(by=['LSOA11CD', 'Date'], inplace=True)
+    dynamic_df.reset_index(drop=True, inplace=True)
+    
+    pd.testing.assert_frame_equal(dynamic_result, dynamic_df)
+    
 def test_geo_merge_static():
     geom_df = factory.get('LSOA_2011').create_dataframe()
     
@@ -117,3 +152,4 @@ def test_apply_timelag():
     df_result.reset_index(drop=True, inplace=True)
     
     pd.testing.assert_frame_equal(df, df_result)
+    
