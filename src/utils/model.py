@@ -21,6 +21,8 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import seaborn as sns
 
+import plotly.express as px
+
 from scipy.stats import pearsonr
 from sklearn.model_selection import GridSearchCV, train_test_split, RandomizedSearchCV
 
