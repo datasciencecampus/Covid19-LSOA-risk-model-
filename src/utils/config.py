@@ -5,7 +5,7 @@ data_start_date = "'2020-04-01'"  #date to select data from
 
 model_start_date = "2021-01-01" #date to begin modelling
 
-model_type = "time_tranche"
+model_type = "two_way_fixed_effects"
 
 geography_dict = {'region':'RGN19NM',
               'travel_cluster':'travel_cluster',
@@ -119,12 +119,7 @@ features_dict['occpn_ftrs']=['OCCUPATION_MANAGERS_DIRECTORS_AND_SENIOR_OFFICIALS
             'OCCUPATION_PROCESS_PLANT_AND_MACHINE_OPERATIVES',
             'OCCUPATION_TRANSPORT_AND_MOBILE_MACHINE_DRIVERS_AND_OPERATIVES']
 
-# 'OCCUPATION_TEXTILES_AND_GARMENTS_TRADES',
-
 features_dict['occpn_groups']=['1_prof_other','1_prof_healthcare',"1_Group_skilled","1_Group_trade"]
-
-# features_dict['age_features']=['age_0_to_3','age_4_to_11','age_12_to_18','age_19_to_30','age_31_to_50','age_51_to_70','age_71_to_90_PLUS']
-
 
 features_dict['age_features']={
      'flag': 'static'
@@ -304,7 +299,8 @@ static_col_drop = ['BAME_PROP',
  'age_65_to_69', 
  'age_70_to_74', 
  'age_75_to_79',
- 'age_80_to_90_PLUS']
+ 'age_80_to_90_PLUS',
+ 'warehousing_manc_def']
 
 # User inputs the location of data they wish to use 
 data_location_big_query = {}
@@ -331,6 +327,15 @@ lagged_dynamic_non_stationary = 'review_ons.time_lagged_dynamic_data_deimos_cums
 tranches_model_input_processed = 'review_ons.tranches_model_input_processed'
 tranches_model_test_data = 'review_ons.tranches_model_test_data'
 
+tranche_coefs_regularisation = 'review_ons.tranches_coefs_regularisation'
+tranche_coefs_standardised = 'review_ons.tranche_coefs_standardised'
+tranche_coefs_non_standardised = 'review_ons.tranche_coefs_non_standardised'
+
+dashboard_tranche_coefs_regularisation = 'review_ons.dashboard_tranche_reg_coefs'
+dashboard_tranche_coefs_standardised = 'review_ons.dashboard_tranche_non_reg_std_coefs'
+dashboard_tranche_coefs_non_standardised = 'review_ons.dashboard_tranche_non_reg_non_std_coefs'
+dashboard_feature_spatial_dist = 'review_ons.dashboard_tranche_model_features'
+
 # zero-inflated model training
 zero_infltd_modl=False
 
@@ -339,7 +344,7 @@ zero_infltd_modl=False
 ## Default is 500, use a lower value, >=1 to speed-up the
 ## evaluations at the cost of reduced search of the optimal
 ## parameters
-parm_spce_grid_srch=500
+param_search_space = 500
 
 # Create a list of alphas for regularisation
 alphas_val = np.logspace(-3, 3, 101)
@@ -397,9 +402,9 @@ feature_pretty_names = {
                        'METHOD_OF_TRAVEL_TO_WORK_NON_MOTORISED':'Commute Method - Non Motorised',
                        'families_with_dependent_children_no_dependent_children':'No Dependent Children',
                        'FAMILIES_WITH_DEPENDENT_CHILDREN_NO_DEPENDENT_CHILDREN':'No Dependent Children',
-                       'care_homes_warehousing_textiles':'Care, Warehouse, Textiles Workers',
+                       'care_homes_warehousing':'Care, Warehousing Workers',
                        'meat_and_fish_processing':'Meat & Fish Processing Workers',
-                       'ready_meals':'Ready Meals Workers',
+                       'ready_meals_textiles':'Ready Meals & Textile Workers',
                        'worker_visitor_footfall_sqm':'Worker Visitor Footfall',
     
                         # quintiles
@@ -417,9 +422,10 @@ feature_pretty_names = {
                        'FAMILIES_WITH_DEPENDENT_CHILDREN_NO_DEPENDENT_CHILDREN_quint':'No Dependent Children Quintile',
                        'METHOD_OF_TRAVEL_TO_WORK_NON_MOTORISED_quint':'Commute Method - Non Motorised Quintile',
                        'meat_and_fish_processing_quint':'Meat & Fish Processing Workers Quintile',
-                       'care_homes_warehousing_textiles_quint':'Care, Warehouse, Textiles Workers Quintile',
+                       'care_homes_warehousing_quint':'Care, Warehousing Workers Quintile',
                        'worker_visitor_footfall_sqm_quint':'Worker Visitor Footfall Quintile',
-                        
+                       'ready_meals_textiles_quint':'Ready Meals & Textile Workers Quintile',
+    
                         # ready meals rank
                        'ready_meals_rank':'Ready Meals Workers Rank'
                          }
@@ -439,16 +445,12 @@ tc_short_names = {'L1. >70% metropolitan core dwellers':'Metro Core',
                   'L5. >70% rural dwellers':'Rural'}
 
 
-# BigQuery table locations    
-tranche_regularised_coefs_gbq_loc = 'wip.multi_grp_coef_no_zir_static_dynamic_tranches'
-tranche_non_reg_stf_coefs_gbq_loc = 'wip.multi_grp_se_coef_no_zir_static_dynamic_tranches'
-tranche_non_reg_non_std_coefs_gbq_loc = 'wip.multi_grp_non_se_coef_no_zir_static_dynamic_tranches'
+# # BigQuery table locations    
 tranche_residuals_gbq_loc = 'wip.multi_grp_pred_no_zir_static_dynamic_tranches'
 tranche_latest_predictions_gbq_loc = 'wip.multi_grp_pred_test_data_no_zir_static_dynamic_tranches'
-tranche_model_features_gbq_loc = 'review_ons.tranche_model_features'
 
-# whether to use linear regression or regression with regularisation for prediction
-linear_rgr_flg=False
+# Flag indicating whether to apply regularisation to the cost function for prediction
+use_regularisation = True
 
 # the total number of LSOAs in England 
 n_lsoa = 32844
