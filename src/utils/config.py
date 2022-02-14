@@ -119,12 +119,7 @@ features_dict['occpn_ftrs']=['OCCUPATION_MANAGERS_DIRECTORS_AND_SENIOR_OFFICIALS
             'OCCUPATION_PROCESS_PLANT_AND_MACHINE_OPERATIVES',
             'OCCUPATION_TRANSPORT_AND_MOBILE_MACHINE_DRIVERS_AND_OPERATIVES']
 
-# 'OCCUPATION_TEXTILES_AND_GARMENTS_TRADES',
-
 features_dict['occpn_groups']=['1_prof_other','1_prof_healthcare',"1_Group_skilled","1_Group_trade"]
-
-# features_dict['age_features']=['age_0_to_3','age_4_to_11','age_12_to_18','age_19_to_30','age_31_to_50','age_51_to_70','age_71_to_90_PLUS']
-
 
 features_dict['age_features']={
      'flag': 'static'
@@ -349,7 +344,7 @@ zero_infltd_modl=False
 ## Default is 500, use a lower value, >=1 to speed-up the
 ## evaluations at the cost of reduced search of the optimal
 ## parameters
-parm_spce_grid_srch=500
+param_search_space = 500
 
 # Create a list of alphas for regularisation
 alphas_val = np.logspace(-3, 3, 101)
@@ -454,8 +449,8 @@ tc_short_names = {'L1. >70% metropolitan core dwellers':'Metro Core',
 tranche_residuals_gbq_loc = 'wip.multi_grp_pred_no_zir_static_dynamic_tranches'
 tranche_latest_predictions_gbq_loc = 'wip.multi_grp_pred_test_data_no_zir_static_dynamic_tranches'
 
-# whether to use linear regression or regression with regularisation for prediction
-linear_rgr_flg=False
+# Flag indicating whether to apply regularisation to the cost function for prediction
+use_regularisation = True
 
 # the total number of LSOAs in England 
 n_lsoa = 32844

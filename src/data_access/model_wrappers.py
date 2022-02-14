@@ -18,7 +18,7 @@ from utils import config as cf
 
 
 def static_model(alphas_val = cf.alphas_val, 
-                 parm_spce_grid_srch = cf.parm_spce_grid_srch,
+                 param_search_space = cf.param_search_space,
                  train_weeks = 1,
                  zero_inf_flg_st = cf.zero_infltd_modl,
                  save_results = True):
@@ -31,8 +31,8 @@ def static_model(alphas_val = cf.alphas_val,
     :param alphas_val: List of alphas for cross-validation. Default is np.logspace(-3, 3, 101), set in config file.
     :type alphas_val: Numpy array
     
-    :param parm_spce_grid_srch: Number of different combinations to use in grid search for hyperparameters. Default is 500, set in config file.
-    :type parm_spce_grid_srch: int
+    :param param_search_space: Number of different combinations to use in randomised search for hyperparameters. Default is 500, set in config file.
+    :type param_search_space: int
     
     :param train_weeks: Number of prior weeks to train the model. Defaults to 1.
     :type train_weeks: int
@@ -73,7 +73,8 @@ def static_model(alphas_val = cf.alphas_val,
         df_chsen=df_chsen.sort_values(by=['week_number','LSOA11CD']).reset_index(drop=True)
         df_chsen=df_chsen[[x for x in df_chsen.columns if x not in ['Date','week_number','Month']]]
 
-        pred_tc,coef_tc=md.fit_model_one_week_static(df_chsen,train_weeks,zero_inf_flg_st,dynamic_features,alphas_val,parm_spce_grid_srch)
+        pred_tc,coef_tc=md.fit_model_one_week_static(df_chsen,train_weeks,zero_inf_flg_st,dynamic_features,alphas_val,param_search_space)
+        
         str_pred_tc_static.append(pred_tc)
         str_coef_tc_static.append(coef_tc)
 
@@ -111,7 +112,7 @@ def static_model(alphas_val = cf.alphas_val,
 def dynamic_model(str_coef_tc_static,
                  str_coef_tc_static_ci,
                  alphas_val = cf.alphas_val, 
-                 parm_spce_grid_srch = cf.parm_spce_grid_srch,
+                 param_search_space = cf.param_search_space,
                  train_weeks = 1,
                  which_clustrng = cf.granularity_for_modelling,
                  save_results = True):
@@ -128,8 +129,8 @@ def dynamic_model(str_coef_tc_static,
     :param alphas_val: List of alphas for cross-validation. Default is np.logspace(-3, 3, 101), set in config file.
     :type alphas_val: Numpy array
     
-    :param parm_spce_grid_srch: Number of different combinations to use in grid search for hyperparameters. Default is 500, set in config file.
-    :type parm_spce_grid_srch: int
+    :param param_search_space: Number of different combinations to use in grid search for hyperparameters. Default is 500, set in config file.
+    :type param_search_space: int
     
     :param train_weeks: Number of prior weeks to train the model. Defaults to 1.
     :type train_weeks: int
@@ -174,7 +175,9 @@ def dynamic_model(str_coef_tc_static,
         df_chsen=df_chsen[[x for x in df_chsen.columns if x not in ['Date','week_number','lsoa_inflow_volume',
                                                                     'total_vaccinated_second_dose_prop_population_cumsum',
                                                                     'COVID_Cases_per_unit_area_cumsum','commute_inflow_sqkm', 'other_inflow_sqkm']]]
-        pred_tc,coef_tc,se_coef_tc=md.fit_model_one_week_dynamic(df_chsen,train_weeks,which_clustrng,alphas_val,parm_spce_grid_srch)
+        
+        pred_tc,coef_tc,se_coef_tc=md.fit_model_one_week_dynamic(df_chsen,train_weeks,which_clustrng,alphas_val,param_search_space)
+        
         str_pred_tc_dynamic.append(pred_tc)
         str_coef_tc_dynamic.append(coef_tc)
         str_se_coef_tc_dynamic.append(se_coef_tc)
@@ -238,9 +241,9 @@ def dynamic_model(str_coef_tc_static,
     return str_coef_tc_dynamic, str_coef_tc_dynamic_ci
 
 
-def tranches_model(lin_regr_or_regrlsn = cf.linear_rgr_flg,
+def tranches_model(use_regularisation = cf.use_regularisation,
                    alphas_val = cf.alphas_val, 
-                   parm_spce_grid_srch = cf.parm_spce_grid_srch,
+                   param_search_space = cf.param_search_space,
                    zero_inf_flg_st = cf.zero_infltd_modl,
                    save_results = True):
     
@@ -252,15 +255,15 @@ def tranches_model(lin_regr_or_regrlsn = cf.linear_rgr_flg,
     2) Standardised coefficient estimates for linear regression without regularisation
     3) Non-standardised coefficient estimates for linear regression without regularisation
     
-    :param lin_regr_of_regrlsn: Flag for whether to use ElasticNet or Linear Regression for prediction.
-    Default is False which returns predictions from the ElasticNet model.
+    :param use_regularisation: Flag indicating which model type to train for the purpose of making predictions.
+    Default is True which trains an Elastic Net model. If false, a Linear Regression model is trained.
     :type: bool
     
     :param alphas_val: List of alphas for cross-validation. Default is np.logspace(-3, 3, 101), set in config file.
     :type alphas_val: Numpy array
     
-    :param parm_spce_grid_srch: Number of different combinations to use in grid search for hyperparameters. Default is 500, set in config file.
-    :type parm_spce_grid_srch: int
+    :param param_search_space: Number of different combinations to use in grid search for optimal hyperparameters. Default is 500, set in config file.
+    :type param_search_space: int
     
     :param zero_inf_flg_st: Whether to use zero-inflated regressor model. Default to False, set in config.
     :type zero_inf_flg_st: bool
@@ -295,11 +298,11 @@ def tranches_model(lin_regr_or_regrlsn = cf.linear_rgr_flg,
         df_chsen=df_chsen.sort_values(by=['tranche_order','LSOA11CD']).reset_index(drop=True)
         df_chsen=df_chsen[[x for x in df_chsen.columns if x not in ['tranche_desc','Date']]]
 
-        pred_tc, coef_tc, se_tc, non_se_tc, pred_tst_tc = md.fit_model_tranche_static_dynamic(lin_regr_or_regrlsn,
+        pred_tc, coef_tc, se_tc, non_se_tc, pred_tst_tc = md.fit_model_tranche_static_dynamic(use_regularisation,
                                                                                           df_chsen,
                                                                                           zero_inf_flg_st,
                                                                                           alphas_val,
-                                                                                          parm_spce_grid_srch,
+                                                                                          param_search_space,
                                                                                           df_all_tranches_sbset_tst_data)
         
         
