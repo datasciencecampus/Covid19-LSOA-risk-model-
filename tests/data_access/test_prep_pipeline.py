@@ -43,6 +43,7 @@ def dynamic_result():
 def test_read_data_dynamic_eng(dynamic_result):
     dynamic_df = pp.read_data('dynamic_test', table_dict = cf.read_data_table_dict, join_col=['LSOA11CD', 'Date'])
     
+    # Filter out Welsh LSOAs from target dataframe
     dynamic_result = dynamic_result[dynamic_result['LSOA11CD'].str.startswith('E')]
     
     # sort to allow comparison
@@ -145,6 +146,7 @@ def test_apply_timelag():
     df['Date'] = df['Date'].apply(lambda x: x.replace(tzinfo=None))
     df_result['Date'] = df_result['Date'].apply(lambda x: x.replace(tzinfo=None))
     
+    # sort to allow comparison
     df.sort_values(by=['LSOA11CD', 'Date'], inplace=True)
     df.reset_index(drop=True, inplace=True)
     
@@ -152,4 +154,79 @@ def test_apply_timelag():
     df_result.reset_index(drop=True, inplace=True)
     
     pd.testing.assert_frame_equal(df, df_result)
+
+# read in target dataframe for join_cases_to_static_data, and input dataframe for derive_week_number and create_test_data
+@pytest.fixture
+def cases_static():
+    
+    df = factory.get('unit_test_cases_static').create_dataframe()
+    
+    df.sort_values(by=['LSOA11CD', 'Date'], inplace=True)
+    df.reset_index(drop=True, inplace=True)
+    
+    return df
+    
+def test_join_cases_to_static_data(cases_static):
+    # input dataframe
+    static_df = factory.get('unit_test_static_for_cases').create_dataframe()
+
+    df = pp.join_cases_to_static_data(static_df, table='unit_test_cases')
+    
+    # sort to allow comparison
+    df.sort_values(by=['LSOA11CD', 'Date'], inplace=True)
+    df.reset_index(drop=True, inplace=True)
+    
+    pd.testing.assert_frame_equal(df, cases_static)
+    
+
+# target dataframe for derive_week_number
+# and input dataframe for join_tranches_mobility_data
+@pytest.fixture
+def cases_static_week():
+    
+    df = factory.get('unit_test_cases_static_week').create_dataframe()
+    
+    df.sort_values(by=['LSOA11CD', 'Date'], inplace=True)
+    df.reset_index(drop=True, inplace=True)
+    
+    return df
+
+def test_derive_week_number(cases_static, cases_static_week):
+    
+    # Ensure data types are as expected
+    cases_static['Date'] = pd.to_datetime(cases_static['Date'].dt.date)
+    
+    df = pp.derive_week_number(cases_static)
+    
+    pd.testing.assert_frame_equal(df, cases_static_week)
+    
+# input for joint_tranches_mobility_data and create_test_data
+@pytest.fixture
+def deimos_footfall():
+    pass
+
+# target dataframe for join_tranches_mobility_data
+# and input for convert_units
+@pytest.fixture
+def tranches_mobility():
+    pass
+
+# target dataframe for convert_units 
+# and input for create_time_tranches and create_test_data
+@pytest.fixture
+def convert_units_df():
+    pass
+
+# target dataframe for create_time_tranches
+# and input for derive_tranche_order
+@pytest.fixture
+def time_tranche_df():
+    pass
+    
+def test_join_tranches_mobility_data(cases_static_week):
+    pass
+    
+
+    
+    
     

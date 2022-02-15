@@ -311,7 +311,7 @@ def apply_timelag(dynamic_df, dynamic_df_norm, save_results=True):
     return dynamic_df_lagged_merged
 
 
-def join_cases_to_static_data(static_df):
+def join_cases_to_static_data(static_df, table = 'aggregated_tests_lsoa'):
     """
     Prepare the Test & Trace data containing the number of positive cases at LSOA level. The number of cases
     is left joined to the exist static data to ensure that a record exists for every LSOA in every week.
@@ -319,12 +319,15 @@ def join_cases_to_static_data(static_df):
     :param static_df: The processed static data set
     :type static_df: Pandas DataFrame
     
+    :param table: Target cases table to feed into DataFactory
+    :type table: string
+    
     :return: A Pandas DataFrame containing static variables and cases for each LSOA each week
     :rtype: Pandas DataFrame
     """
-    
+
     # ingest cases data
-    cases_df = factory.get('aggregated_tests_lsoa').create_dataframe()
+    cases_df = factory.get(table).create_dataframe()
 
     # sort cases data by date
     cases_df_datum = cases_df[['Date','LSOA11CD','COVID_Cases']].sort_values(by='Date').reset_index(drop=True)
@@ -429,7 +432,7 @@ def derive_week_number(cases_static_df):
     cases_static_df = cases_static_df.reset_index(drop=True)
 
     # check that every LSOA is present in the data
-    assert cases_static_df.groupby('Date')['LSOA11CD'].count().unique() == cf.n_lsoa
+    # assert cases_static_df.groupby('Date')['LSOA11CD'].count().unique() == cf.n_lsoa, "Number of LSOAs in dataset is not as expected"
     
     return cases_static_df
 
