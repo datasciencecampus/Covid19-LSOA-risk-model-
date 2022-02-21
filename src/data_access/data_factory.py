@@ -124,12 +124,12 @@ class DataFactory:
                 table = conf.tranche_coefs_non_standardised
                 query = f"SELECT * FROM `{table}`"
                 return NoProcessing(query)  
-            if data_name == 'tranche_residuals':
-                table = conf.tranche_residuals_gbq_loc
+            if data_name == 'tranche_preds_all_tranches':
+                table = conf.tranche_preds_all_tranches
                 query = f"SELECT * FROM `{table}`"
                 return NoProcessing(query)  
-            if data_name == 'tranche_latest_predictions':
-                table = conf.tranche_latest_predictions_gbq_loc
+            if data_name == 'tranche_preds_latest':
+                table = conf.tranche_preds_latest
                 query = f"SELECT * FROM `{table}`"
                 return NoProcessing(query)      
             if data_name == 'tranche_model_features':

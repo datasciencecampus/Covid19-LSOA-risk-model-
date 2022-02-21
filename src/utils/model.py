@@ -798,10 +798,10 @@ def fit_model_tranche_static_dynamic(use_regularisation, df_to_fit, zero_inf_flg
         clf = LogisticRegression(random_state=1,max_iter=10000)
         
         # we can choose regression with regularisation or standard linear regression
-        if use_regularisaion:
+        if use_regularisation:
             
             rgr = ElasticNet()
-            param_distributions_rgrn = {'alpha' : alp_regrlsn,'l1_ratio':np.linspace(0.05, 1, 100)}
+            param_distributions_rgrn = {'alpha' : alphas_val, 'l1_ratio':np.linspace(0.05, 1, 100)}
             param_search_space = param_search_space
             flg = ''
             
