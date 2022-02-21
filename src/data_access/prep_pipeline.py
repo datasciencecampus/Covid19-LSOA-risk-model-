@@ -434,7 +434,7 @@ def derive_week_number(cases_static_df):
     return cases_static_df
 
 
-def create_test_data(all_weeks_df, static_df, deimos_footfall_df):
+def create_test_data(all_weeks_df, static_df, deimos_footfall_df, idbr_features = cf.tranche_model_idbr_features):
     '''
     Create a test data set which contains records for which mobility data
     is available but cases data is not available. 
@@ -447,6 +447,9 @@ def create_test_data(all_weeks_df, static_df, deimos_footfall_df):
     
     :param deimos_footfall_df: A DataFrame containing footfall data
     :type deimos_footfall_df: Pandas DataFrame
+    
+    :param idbr_features: List of column names of the IDBR features
+    :type idbr_features: [str]
     
     :return : A DataFrame on which to test the trained model
     :rtype: Pandas DataFrame
@@ -466,6 +469,13 @@ def create_test_data(all_weeks_df, static_df, deimos_footfall_df):
                             colname = 'worker_visitor_footfall_sqkm',
                             factor = 0.000001,
                             new_colname = 'worker_visitor_footfall_sqm')
+    
+    # convert units of IDBR features to align with the training data
+    for feature in idbr_features:
+        
+        test_df = convert_units(df = test_df, 
+                                colname = feature, 
+                                factor = 0.01)
     
     # store the date range as a string
     test_data_range = test_df['Date'].min() + '-' + test_df['Date'].max()
