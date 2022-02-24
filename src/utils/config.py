@@ -119,12 +119,7 @@ features_dict['occpn_ftrs']=['OCCUPATION_MANAGERS_DIRECTORS_AND_SENIOR_OFFICIALS
             'OCCUPATION_PROCESS_PLANT_AND_MACHINE_OPERATIVES',
             'OCCUPATION_TRANSPORT_AND_MOBILE_MACHINE_DRIVERS_AND_OPERATIVES']
 
-# 'OCCUPATION_TEXTILES_AND_GARMENTS_TRADES',
-
 features_dict['occpn_groups']=['1_prof_other','1_prof_healthcare',"1_Group_skilled","1_Group_trade"]
-
-# features_dict['age_features']=['age_0_to_3','age_4_to_11','age_12_to_18','age_19_to_30','age_31_to_50','age_51_to_70','age_71_to_90_PLUS']
-
 
 features_dict['age_features']={
      'flag': 'static'
@@ -304,7 +299,8 @@ static_col_drop = ['BAME_PROP',
  'age_65_to_69', 
  'age_70_to_74', 
  'age_75_to_79',
- 'age_80_to_90_PLUS']
+ 'age_80_to_90_PLUS',
+ 'warehousing_manc_def']
 
 # User inputs the location of data they wish to use 
 data_location_big_query = {}
@@ -317,43 +313,65 @@ data_location_big_query['mobility_MARS'] = "wip.mars_daily_trips_to_and_from_hom
 
 data_location_big_query['mobility_DEIMOS'] = "ons-hotspot-prod.wip.people_counts_df_lsoa_daily_latest"
 
-# file names
+# Locations on BigQuery
 project_name = 'ons-hotspot-prod'
 
+# Processed static data
 static_data_file = 'review_ons.risk_model_static_variables'
 
+# Dynamic data set 
 dynamic_data_file = 'review_ons.dynamic_lsoa_variables'
 dynamic_data_file_normalised = 'review_ons.dynamic_lsoa_variables_raw_norm_chsn_lag'
 
+# Lagged data sets
 lagged_dynamic_stationary = 'review_ons.time_lagged_dynamic_data_deimos_cumsum_stationary_main'
 lagged_dynamic_non_stationary = 'review_ons.time_lagged_dynamic_data_deimos_cumsum_non_stationary_main'
 
+# Tranches model inputs
 tranches_model_input_processed = 'review_ons.tranches_model_input_processed'
 tranches_model_test_data = 'review_ons.tranches_model_test_data'
 
+# Tranche model coefs
+tranche_coefs_regularisation = 'review_ons.tranches_coefs_regularisation'
+tranche_coefs_standardised = 'review_ons.tranche_coefs_standardised'
+tranche_coefs_non_standardised = 'review_ons.tranche_coefs_non_standardised'
+
+# Tranche model predictions and residuals
+tranche_preds_all_tranches = 'review_ons.tranche_preds'
+tranche_preds_latest = 'review_ons.tranche_preds_latest'
+
+# Processed outputs to be picked up by Google Data Studio dashboard
+dashboard_tranche_coefs_regularisation = 'review_ons.dashboard_tranche_reg_coefs'
+dashboard_tranche_coefs_standardised = 'review_ons.dashboard_tranche_non_reg_std_coefs'
+dashboard_tranche_coefs_non_standardised = 'review_ons.dashboard_tranche_non_reg_non_std_coefs'
+dashboard_feature_spatial_dist = 'review_ons.dashboard_tranche_model_features'
+dashboard_tranche_residuals = 'review_ons.dashboard_tranche_residuals'
+dashboard_tranche_latest_preds = 'review_ons.dashboard_tranche_latest_preds'
+
+
 # zero-inflated model training
-zero_infltd_modl=False
+zero_infltd_modl = False
 
 ## Model parameters
 ## Number of different combinations of grid search hyperparameters
 ## Default is 500, use a lower value, >=1 to speed-up the
 ## evaluations at the cost of reduced search of the optimal
 ## parameters
-parm_spce_grid_srch=500
+param_search_space = 500
 
 # Create a list of alphas for regularisation
 alphas_val = np.logspace(-3, 3, 101)
 
 
 #Lag_configurations
-cols_not_to_lag=['Date','LSOA11CD']  
-mobility_cols_to_lag=['worker_visitor_footfall_sqkm_norm_lag_area','resident_footfall_sqkm_norm_lag_area','commute_inflow_sqkm_norm_lag_area','other_inflow_sqkm_norm_lag_area']
-vacc_cols_to_lag=[] 
+cols_not_to_lag = ['Date','LSOA11CD']  
+mobility_cols_to_lag = ['worker_visitor_footfall_sqkm_norm_lag_area','resident_footfall_sqkm_norm_lag_area','commute_inflow_sqkm_norm_lag_area','other_inflow_sqkm_norm_lag_area']
+vacc_cols_to_lag = [] 
 
 
 #modelling - These vars will be included in the dataset that undergoes modelling (they do not have to be included in the modelling itself if not wanted)
-dynamic_vacc=[]
-dynamic_mobility=['worker_visitor_footfall_sqkm','resident_footfall_sqkm','commute_inflow_sqkm','other_inflow_sqkm']
+dynamic_vacc = []
+dynamic_mobility = ['worker_visitor_footfall_sqkm','resident_footfall_sqkm','commute_inflow_sqkm','other_inflow_sqkm']
 
 # GCP dataset prefix for static and dynamic risk model outputs
 # suffix will change for static/dynamic and whether zero inflation is applied
@@ -397,9 +415,9 @@ feature_pretty_names = {
                        'METHOD_OF_TRAVEL_TO_WORK_NON_MOTORISED':'Commute Method - Non Motorised',
                        'families_with_dependent_children_no_dependent_children':'No Dependent Children',
                        'FAMILIES_WITH_DEPENDENT_CHILDREN_NO_DEPENDENT_CHILDREN':'No Dependent Children',
-                       'care_homes_warehousing_textiles':'Care, Warehouse, Textiles Workers',
+                       'care_homes_warehousing':'Care, Warehousing Workers',
                        'meat_and_fish_processing':'Meat & Fish Processing Workers',
-                       'ready_meals':'Ready Meals Workers',
+                       'ready_meals_textiles':'Ready Meals & Textile Workers',
                        'worker_visitor_footfall_sqm':'Worker Visitor Footfall',
     
                         # quintiles
@@ -417,9 +435,10 @@ feature_pretty_names = {
                        'FAMILIES_WITH_DEPENDENT_CHILDREN_NO_DEPENDENT_CHILDREN_quint':'No Dependent Children Quintile',
                        'METHOD_OF_TRAVEL_TO_WORK_NON_MOTORISED_quint':'Commute Method - Non Motorised Quintile',
                        'meat_and_fish_processing_quint':'Meat & Fish Processing Workers Quintile',
-                       'care_homes_warehousing_textiles_quint':'Care, Warehouse, Textiles Workers Quintile',
+                       'care_homes_warehousing_quint':'Care, Warehousing Workers Quintile',
                        'worker_visitor_footfall_sqm_quint':'Worker Visitor Footfall Quintile',
-                        
+                       'ready_meals_textiles_quint':'Ready Meals & Textile Workers Quintile',
+    
                         # ready meals rank
                        'ready_meals_rank':'Ready Meals Workers Rank'
                          }
@@ -438,31 +457,28 @@ tc_short_names = {'L1. >70% metropolitan core dwellers':'Metro Core',
                   'L4. >70% exurban dwellers':'Exurban',
                   'L5. >70% rural dwellers':'Rural'}
 
-
-# BigQuery table locations    
-tranche_regularised_coefs_gbq_loc = 'wip.multi_grp_coef_no_zir_static_dynamic_tranches'
-tranche_non_reg_stf_coefs_gbq_loc = 'wip.multi_grp_se_coef_no_zir_static_dynamic_tranches'
-tranche_non_reg_non_std_coefs_gbq_loc = 'wip.multi_grp_non_se_coef_no_zir_static_dynamic_tranches'
-tranche_residuals_gbq_loc = 'wip.multi_grp_pred_no_zir_static_dynamic_tranches'
-tranche_latest_predictions_gbq_loc = 'wip.multi_grp_pred_test_data_no_zir_static_dynamic_tranches'
-tranche_model_features_gbq_loc = 'review_ons.tranche_model_features'
-
-# whether to use linear regression or regression with regularisation for prediction
-linear_rgr_flg=False
+# Flag indicating whether to apply regularisation to the cost function for prediction
+use_regularisation = True
 
 # the total number of LSOAs in England 
 n_lsoa = 32844
 
 # number of tranches to model
-n_tranches = 7
+n_tranches = 8
 
 # Dates to slit on for the different time tranches
-tranche_dates = ['2020-04-26','2020-08-31','2020-11-14','2020-12-31','2021-02-14','2021-04-29','2021-07-15']
+tranche_dates = ['2020-04-26','2020-08-31','2020-11-14','2020-12-31','2021-02-14','2021-04-29','2021-07-15','2021-08-31']
 
 # Description of each tranche
 #eg. period between '2020-04-26'to '2020-08-31' is of low prevalence and majority of schools closed in that period
-tranche_description = ['low_prev_no_school','high_prev_school_opn','high_prev_school_opn_alph','high_prev_no_school_alph_vaccn',\
-        'low_prev_school_opn_vaccn_dbl','high_prev_school_opn_dlta_vaccn_dbl','lifting_lockdown']
+tranche_description = ['low_prev_no_school',
+                       'high_prev_school_opn',
+                       'high_prev_school_opn_alph',
+                       'high_prev_no_school_alph_vaccn',
+                       'low_prev_school_opn_vaccn_dbl',
+                       'high_prev_school_opn_dlta_vaccn_dbl',
+                       'lifting_lockdown',
+                       'high_prev_school_open_delta_vaccn']
 
 # the key is a new column to be created in the static data
 # the values in the new column are the sum of the columns listed in the value of this dictionary

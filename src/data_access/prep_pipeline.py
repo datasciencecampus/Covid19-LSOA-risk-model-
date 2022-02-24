@@ -456,7 +456,7 @@ def derive_week_number(cases_static_df):
     return cases_static_df
 
 
-def create_test_data(all_weeks_df, static_df, deimos_footfall_df):
+def create_test_data(all_weeks_df, static_df, deimos_footfall_df, idbr_features = cf.tranche_model_idbr_features):
     '''
     Create a test data set which contains records for which mobility data
     is available but cases data is not available. 
@@ -470,6 +470,9 @@ def create_test_data(all_weeks_df, static_df, deimos_footfall_df):
     :param deimos_footfall_df: A DataFrame containing footfall data
     :type deimos_footfall_df: Pandas DataFrame
     
+    :param idbr_features: List of column names of the IDBR features
+    :type idbr_features: [str]
+    
     :return : A DataFrame on which to test the trained model
     :rtype: Pandas DataFrame
     '''
@@ -482,6 +485,28 @@ def create_test_data(all_weeks_df, static_df, deimos_footfall_df):
     
     # the test set contains only timestamps where footfall data is available, but not cases data
     test_df = footfall_static_df[footfall_static_df['Date'] > date_cutoff].reset_index(drop=True)
+    
+    # convert units of mobility features to align with the training data
+    test_df = convert_units(df = test_df, 
+                            colname = 'worker_visitor_footfall_sqkm',
+                            factor = 0.000001,
+                            new_colname = 'worker_visitor_footfall_sqm')
+    
+    # convert units of IDBR features to align with the training data
+    for feature in idbr_features:
+        
+        test_df = convert_units(df = test_df, 
+                                colname = feature, 
+                                factor = 0.01)
+    
+    # store the date range as a string
+    test_data_range = test_df['Date'].min() + '-' + test_df['Date'].max()
+    
+    # collapse into one row per LSOA
+    test_df = test_df.groupby(['LSOA11CD', 'travel_cluster'])[list(test_df.select_dtypes(include=np.number).columns)].mean().reset_index()
+        
+    # insert date range column
+    test_df['Date'] = test_data_range
     
     return test_df
 
