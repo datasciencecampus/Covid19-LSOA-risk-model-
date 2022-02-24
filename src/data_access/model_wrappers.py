@@ -249,11 +249,13 @@ def tranches_model(use_regularisation = cf.use_regularisation,
     
     """
     Loads training and test data from BigQuery, runs a regression model for each time tranche of
-    each travel cluster. Results are output in the form of three dataframes:
+    each travel cluster. Results are output in the form of five dataframes:
     
     1) Coefficient estimates for linear regression with regularisation
     2) Standardised coefficient estimates for linear regression without regularisation
     3) Non-standardised coefficient estimates for linear regression without regularisation
+    4) Predictions for each time tranche
+    5) Predictions on the test data
     
     :param use_regularisation: Flag indicating which model type to train for the purpose of making predictions.
     Default is True which trains an Elastic Net model. If false, a Linear Regression model is trained.
@@ -271,7 +273,7 @@ def tranches_model(use_regularisation = cf.use_regularisation,
     :param save_results: Flag for whether to output results to tables or not. Default True.
     :type: bool
 
-    :return: Three dataframes as described earlier in this docstring
+    :return: Five dataframes as described earlier in this docstring
     :rtype: Pandas DataFrames
     """
     
@@ -315,16 +317,20 @@ def tranches_model(use_regularisation = cf.use_regularisation,
     # Store most important features used for making predictions 
     # for each travel cluster and for each tranche
     # This includes both significant and non-significant features
-    str_coef_tc_static=pd.concat(str_coef_tc_static).reset_index()
+    str_coef_tc_static = pd.concat(str_coef_tc_static).reset_index()
 
     # store the standard error/p-value of the coefficients of trained model - standardised coefs
     str_se_coef_tc_static = pd.concat(str_se_coef_tc_static).reset_index()
 
     # store the standard error/p-value of the coefficients of trained model
     str_non_se_coef_tc_static = pd.concat(str_non_se_coef_tc_static).reset_index()
-
-    # time tranches model is used for generating coefficient estimates
-    # only consider the dataframes of coefficients. Predicsions and residuals will be dealt with by the two-way fixed effects model
+    
+    # Store the predictions of trained model
+    str_pred_tc_static = pd.concat(str_pred_tc_static).reset_index(drop=True)
+    
+    # latest prediction on unseen test data
+    pred_latest = pd.concat(str_pred_tc_recnt).sort_values(by='Predicted_cases_test',ascending=False).reset_index(drop=True)
+    
     result_dfs = [str_coef_tc_static, str_se_coef_tc_static, str_non_se_coef_tc_static]
 
     # derive a lookup table of dates to tranche numbers to tranche description
@@ -344,6 +350,14 @@ def tranches_model(use_regularisation = cf.use_regularisation,
         df['Date'] = df['tranche'].map(rvse_event_dict).map(rvse_date_dict)
         df['tranche_desc'] = df['tranche'].map(rvse_event_dict)
         df['Features'] = df['Features'].str.lower()
+        
+    
+    str_pred_tc_static['tranche_desc']=str_pred_tc_static['tranche_train'].map(rvse_event_dict)
+    str_pred_tc_static['Date']=str_pred_tc_static['tranche_desc'].map(rvse_date_dict)
+    str_pred_tc_static.rename(columns={'tranche_train':'tranche'},inplace=True)
+    
+    str_pred_tc_static['Residual']=str_pred_tc_static['Actual_cases']-str_pred_tc_static['Predicted_cases_train']
+    
      
     # rename columns for legibility
     str_se_coef_tc_static.rename(columns={'coef':'standardised_coef',
@@ -363,8 +377,10 @@ def tranches_model(use_regularisation = cf.use_regularisation,
         str_coef_tc_static.to_gbq(cf.tranche_coefs_regularisation, project_id=cf.project_name, if_exists='replace')
         str_se_coef_tc_static.to_gbq(cf.tranche_coefs_standardised, project_id=cf.project_name, if_exists='replace')
         str_non_se_coef_tc_static.to_gbq(cf.tranche_coefs_non_standardised, project_id=cf.project_name, if_exists='replace')
+        str_pred_tc_static.to_gbq(cf.tranche_preds_all_tranches, project_id=cf.project_name, if_exists='replace')
+        pred_latest.to_gbq(cf.tranche_preds_latest, project_id=cf.project_name, if_exists='replace')
 
-    return str_coef_tc_static, str_se_coef_tc_static, str_non_se_coef_tc_static
+    return str_coef_tc_static, str_se_coef_tc_static, str_non_se_coef_tc_static, str_pred_tc_static, pred_latest
     
     
     

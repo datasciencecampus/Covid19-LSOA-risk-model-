@@ -1,16 +1,12 @@
-# Import Packages
 import os
 import sys
 
-# Import from local data files
+# add local path to allow module imports
 current_path = os.path.abspath('.')
 sys.path.append(os.path.dirname(current_path))
 
 from data_access import model_wrappers as mw
 from utils import config as cf
-
-# for the purposes of testing, separate the two out using the config file
-# when ready for production, remove this distinction. We want to run both models at the same time.
 
 if cf.model_type == "two_way_fixed_effects":
     
@@ -20,6 +16,5 @@ if cf.model_type == "two_way_fixed_effects":
     
 else:
     
-    # do the time tranches model
-    str_coef_tc_static, str_se_coef_tc_static, str_non_se_coef_tc_static = mw.tranches_model()
+    str_coef_tc_static, str_se_coef_tc_static, str_non_se_coef_tc_static, str_pred_tc_static, pred_latest = mw.tranches_model()
 
