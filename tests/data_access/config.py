@@ -1,6 +1,6 @@
 read_data_table_dict =  {
      'static_test': ['unit_test_static_vars', 'unit_test_mid_year_lsoa', 'unit_test_mobility_clusters', 'unit_test_flow_to_work', 'unit_test_lsoa_2011']
-    ,'dynamic_test': ['unit_test_cases', 'unit_test_deimos', 'unit_test_footfall']
+    ,'dynamic_test': ['unit_test_cases', 'unit_test_deimos']
 }
 
 static_columns = ['LSOA11CD', 'LSOA11NM', 'MSOA11CD', 'MSOA11NM', 'LTLA20CD', 'LTLA20NM',

@@ -20,6 +20,25 @@ import utils.dynamic as dyn
 
 #############################
 
+def sort_cols(df, cols):
+    '''
+    Simple function to sort a dataframe by the specified column(s) and reset the index. Returns sorted and reindexed dataframe, although assignment is not necessary as the input dataframe is not copied and operations are performed in place.
+    
+    :param df: Dataframe to sort
+    :type df: Pandas DataFrame
+    
+    :param cols: Column(s) to sort the dataframe
+    :type cols: string, or list of strings
+    
+    :return: Sorted and reindexed dataframe
+    :rtype: Pandas DataFrame
+    '''
+    
+    df.sort_values(by=cols, inplace=True)
+    df.reset_index(drop=True, inplace=True)
+    
+    return df
+
 def read_data(table_type, table_dict = cf.data_tables, join_col = 'LSOA11CD', england_only = True):
     '''
     Read in and join a list of data tables on a common column.

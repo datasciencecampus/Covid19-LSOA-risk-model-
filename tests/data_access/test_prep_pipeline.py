@@ -24,11 +24,8 @@ def test_read_data_static():
     static_result['geometry'] = static_result['geometry'].astype(str)
     
     # sort values and reindex to allow assertion of equality
-    static_df.sort_values(by='LSOA11CD', inplace=True)
-    static_df.reset_index(drop=True, inplace=True)
-
-    static_result.sort_values(by='LSOA11CD', inplace=True)
-    static_result.reset_index(drop=True, inplace=True)
+    pp.sort_cols(static_df, 'LSOA11CD')
+    pp.sort_cols(static_result, 'LSOA11CD')
     
     pd.testing.assert_frame_equal(static_result, static_df)
     
@@ -47,11 +44,8 @@ def test_read_data_dynamic_eng(dynamic_result):
     dynamic_result = dynamic_result[dynamic_result['LSOA11CD'].str.startswith('E')]
     
     # sort to allow comparison
-    dynamic_result.sort_values(by=['LSOA11CD', 'Date'], inplace=True)
-    dynamic_result.reset_index(drop=True, inplace=True)
-
-    dynamic_df.sort_values(by=['LSOA11CD', 'Date'], inplace=True)
-    dynamic_df.reset_index(drop=True, inplace=True)
+    pp.sort_cols(dynamic_result, ['LSOA11CD', 'Date'])
+    pp.sort_cols(dynamic_df, ['LSOA11CD', 'Date'])
     
     pd.testing.assert_frame_equal(dynamic_result, dynamic_df)
 
@@ -60,11 +54,8 @@ def test_read_data_dynamic_all(dynamic_result):
     dynamic_df = pp.read_data('dynamic_test', table_dict = cf.read_data_table_dict, join_col=['LSOA11CD', 'Date'], england_only=False)
     
     # sort to allow comparison
-    dynamic_result.sort_values(by=['LSOA11CD', 'Date'], inplace=True)
-    dynamic_result.reset_index(drop=True, inplace=True)
-
-    dynamic_df.sort_values(by=['LSOA11CD', 'Date'], inplace=True)
-    dynamic_df.reset_index(drop=True, inplace=True)
+    pp.sort_cols(dynamic_result, ['LSOA11CD', 'Date'])
+    pp.sort_cols(dynamic_df, ['LSOA11CD', 'Date'])
     
     pd.testing.assert_frame_equal(dynamic_result, dynamic_df)
     
@@ -114,8 +105,7 @@ def test_ffill_cumsum():
     
     # sort and reindex as GCP tables are automatically sorted upon saving
     for df in [df_one, df_two, df_one_result, df_two_result]:
-        df.sort_values(by=['date', 'col3'], inplace=True)
-        df.reset_index(drop=True, inplace=True)
+        pp.sort_cols(df, ['date', 'col3'])
     
     pd.testing.assert_frame_equal(df_one, df_one_result)
     
@@ -147,11 +137,8 @@ def test_apply_timelag():
     df_result['Date'] = df_result['Date'].apply(lambda x: x.replace(tzinfo=None))
     
     # sort to allow comparison
-    df.sort_values(by=['LSOA11CD', 'Date'], inplace=True)
-    df.reset_index(drop=True, inplace=True)
-    
-    df_result.sort_values(by=['LSOA11CD', 'Date'], inplace=True)
-    df_result.reset_index(drop=True, inplace=True)
+    pp.sort_cols(df, ['LSOA11CD', 'Date'])
+    pp.sort_cols(df_result, ['LSOA11CD', 'Date'])
     
     pd.testing.assert_frame_equal(df, df_result)
 
@@ -161,8 +148,7 @@ def cases_static():
     
     df = factory.get('unit_test_cases_static').create_dataframe()
     
-    df.sort_values(by=['LSOA11CD', 'Date'], inplace=True)
-    df.reset_index(drop=True, inplace=True)
+    pp.sort_cols(df, ['LSOA11CD', 'Date'])
     
     return df
     
@@ -173,8 +159,7 @@ def test_join_cases_to_static_data(cases_static):
     df = pp.join_cases_to_static_data(static_df, table='unit_test_cases')
     
     # sort to allow comparison
-    df.sort_values(by=['LSOA11CD', 'Date'], inplace=True)
-    df.reset_index(drop=True, inplace=True)
+    pp.sort_cols(df, ['LSOA11CD', 'Date'])
     
     pd.testing.assert_frame_equal(df, cases_static)
     
@@ -186,8 +171,7 @@ def cases_static_week():
     
     df = factory.get('unit_test_cases_static_week').create_dataframe()
     
-    df.sort_values(by=['LSOA11CD', 'Date'], inplace=True)
-    df.reset_index(drop=True, inplace=True)
+    pp.sort_cols(df, ['LSOA11CD', 'Date'])
     
     return df
 
@@ -203,19 +187,36 @@ def test_derive_week_number(cases_static, cases_static_week):
 # input for joint_tranches_mobility_data and create_test_data
 @pytest.fixture
 def deimos_footfall():
-    pass
+    
+    df = factory.get('unit_test_deimos').create_dataframe()
+    
+    df['Date'] = pd.to_datetime(df['Date'].dt.date)
+    
+    pp.sort_cols(df, ['LSOA11CD', 'Date'])
+    
+    return df
 
 # target dataframe for join_tranches_mobility_data
 # and input for convert_units
 @pytest.fixture
 def tranches_mobility():
-    pass
+    
+    df = factory.get('unit_test_deimos_cases').create_dataframe()
+    
+    pp.sort_cols(df, ['LSOA11CD', 'Date'])
+    
+    return df
 
 # target dataframe for convert_units 
 # and input for create_time_tranches and create_test_data
 @pytest.fixture
 def convert_units_df():
-    pass
+    
+    df = factory.get('unit_test_convert_unit').create_dataframe()
+    
+    pp.sort_cols(df, ['LSOA11CD', 'Date'])
+    
+    return df
 
 # target dataframe for create_time_tranches
 # and input for derive_tranche_order
@@ -223,9 +224,46 @@ def convert_units_df():
 def time_tranche_df():
     pass
     
-def test_join_tranches_mobility_data(cases_static_week):
-    pass
+def test_join_tranches_mobility_data(cases_static_week, deimos_footfall, tranches_mobility):
     
+    df = pp.join_tranches_mobility_data(cases_static_week, deimos_footfall)
+    
+    pd.testing.assert_frame_equal(df, tranches_mobility)
+    
+# test default behaviour of function
+def test_convert_units(tranches_mobility, convert_units_df):
+    
+    df = pp.convert_units(tranches_mobility,
+                          'meat_and_fish_processing',
+                          0.1)
+    
+    pd.testing.assert_frame_equal(df, convert_units_df)
+    
+# test non-default parameter behaviour
+def test_convert_units_alt(tranches_mobility):
+    
+    # read in target dataframe
+    df_result = factory.get('unit_test_convert_unit_alt').create_dataframe()
+    
+    pp.sort_cols(df_result, ['LSOA11CD', 'Date'])
+    
+    df = pp.convert_units(tranches_mobility,
+                          'meat_and_fish_processing',
+                          0.1,
+                          new_colname='meat_and_fish_processing_alt')
+    
+    pd.testing.assert_frame_equal(df, df_result)
+    
+
+def test_create_test_data(convert_units_df, cases_static, deimos_footfall):
+    pass
+
+def test_create_time_tranches(convert_units_df, time_tranche_df):
+    pass
+
+def test_derive_tranche_order(time_tranche_df):
+    # read in target here, not used elsewhere
+    pass
 
     
     
