@@ -9,7 +9,7 @@ sys.path.append(os.getcwd() + '/src/data_access')
 
 import prep_pipeline as pp
 
-import config as cf
+import config_unit_testing as cf
 from data_access.data_factory import DataFactory as factory
 
 
@@ -151,11 +151,17 @@ def cases_static():
     pp.sort_cols(df, ['LSOA11CD', 'Date'])
     
     return df
-    
-def test_join_cases_to_static_data(cases_static):
-    # input dataframe
-    static_df = factory.get('unit_test_static_for_cases').create_dataframe()
 
+# input for join_cases_to_static_data and create_test_data
+@pytest.fixture
+def static_df():
+    
+    df = factory.get('unit_test_static_for_cases').create_dataframe()
+
+    return df
+    
+def test_join_cases_to_static_data(static_df, cases_static):
+    
     df = pp.join_cases_to_static_data(static_df, table='unit_test_cases')
     
     # sort to allow comparison
@@ -222,7 +228,12 @@ def convert_units_df():
 # and input for derive_tranche_order
 @pytest.fixture
 def time_tranche_df():
-    pass
+    
+    df = factory.get('unit_test_time_tranche').create_dataframe()
+    
+    pp.sort_cols(df, ['LSOA11CD', 'Date'])
+    
+    return df
     
 def test_join_tranches_mobility_data(cases_static_week, deimos_footfall, tranches_mobility):
     
@@ -254,16 +265,44 @@ def test_convert_units_alt(tranches_mobility):
     
     pd.testing.assert_frame_equal(df, df_result)
     
-
-def test_create_test_data(convert_units_df, cases_static, deimos_footfall):
-    pass
+def test_create_test_data(convert_units_df, static_df, deimos_footfall):
+    
+    # read in target dataframe
+    df_result = factory.get('unit_test_tranche_test').create_dataframe()
+    pp.sort_cols(df_result, ['LSOA11CD', 'Date'])
+    
+    deimos_footfall['Date'] = deimos_footfall['Date'].astype(str)
+    
+    df = pp.create_test_data(convert_units_df, static_df, deimos_footfall,
+                            idbr_features=cf.tranche_model_idbr_features)
+    pp.sort_cols(df, ['LSOA11CD', 'Date'])
+    
+    pd.testing.assert_frame_equal(df, df_result)
 
 def test_create_time_tranches(convert_units_df, time_tranche_df):
-    pass
+    
+    df = pp.create_time_tranches(convert_units_df,
+                                 tranche_dates=cf.tranche_dates,
+                                 tranche_description = cf.tranche_description)
+    
+    df = pp.sort_cols(df, ['LSOA11CD', 'Date'])
+    
+    pd.testing.assert_frame_equal(df, time_tranche_df)
 
 def test_derive_tranche_order(time_tranche_df):
-    # read in target here, not used elsewhere
-    pass
+    
+    # read in target dataframe
+    
+    df_result = factory.get('unit_test_tranche_order').create_dataframe()
+    
+    pp.sort_cols(df_result, ['LSOA11CD', 'Date'])
+    
+    df = pp.derive_tranche_order(time_tranche_df,
+                                 tranche_description=cf.tranche_description)
+    
+    pp.sort_cols(df, ['LSOA11CD', 'Date'])
+    
+    pd.testing.assert_frame_equal(df, df_result)
 
     
     
