@@ -1,6 +1,5 @@
 import numpy as np
 
-
 data_start_date = "'2020-04-01'"  #date to select data from
 
 model_start_date = "2021-01-01" #date to begin modelling

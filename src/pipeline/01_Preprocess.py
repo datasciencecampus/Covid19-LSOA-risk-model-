@@ -19,7 +19,7 @@ from utils import config as cf
 print("Loading static data from BigQuery...")
 
 # read in static data
-static_df_raw = df_static_in
+static_df_raw = pp.read_data('static')
 
 print("Processing static data...")
 
@@ -122,7 +122,7 @@ elif cf.model_type == "time_tranche":
     # load and process mobility data
     cases_mobility_all_weeks_df = pp.join_tranches_mobility_data(cases_all_weeks_df, deimos_footfall_df)
     
-    # convert mobility metric units from square kilometres to sqare metres
+    # convert mobility metric units from square kilometres to square metres
     cases_mobility_all_weeks_df = pp.convert_units(df = cases_mobility_all_weeks_df, 
                                                    colname = 'worker_visitor_footfall_sqkm',
                                                    factor = 0.000001,
@@ -163,7 +163,7 @@ elif cf.model_type == "time_tranche":
     # create a 'tranche_order' column for plotting later
     tranches_df = pp.derive_tranche_order(tranches_df)
     
-     # create excess vaccines feature
+    # create excess vaccinations feature
     tranches_df['vax_2_minus_1'] = tranches_df['total_vaccinated_second_dose'] - tranches_df['total_vaccinated_first_dose']   
     tranches_df.drop(['total_vaccinated_first_dose', 'total_vaccinated_second_dose'], axis=1, inplace=True)
     
