@@ -1,7 +1,7 @@
 # import packages
 import os
 import sys
-
+import numpy as np
 import pandas as pd
 import pandas_gbq
 
@@ -19,12 +19,12 @@ from utils import config as cf
 print("Loading static data from BigQuery...")
 
 # read in static data
-static_df = pp.read_data('static')
+static_df_raw = pp.read_data('static')
 
 print("Processing static data...")
 
 # merge geography polygon data to find LSOA areas
-static_df = pp.geo_merge(static_df)
+static_df = pp.geo_merge(static_df_raw)
 
 # normalise static data
 static_df = pp.normalise_data(static_df, 'static')
@@ -108,6 +108,12 @@ elif cf.model_type == "time_tranche":
     # generate a 'week number' column
     cases_all_weeks_df = pp.derive_week_number(cases_all_weeks_df)
     
+    print("Joining vaccination data...")
+    
+    df_vax = factory.get('lsoa_vaccinations').create_dataframe()
+    
+    vax_processed_df, cases_all_weeks_df = pp.join_vax_data(cases_all_weeks_df, df_vax)
+    
     print("Loading mobility data from BigQuery...")
     
     # load the mobility data from BigQuery
@@ -116,7 +122,7 @@ elif cf.model_type == "time_tranche":
     # load and process mobility data
     cases_mobility_all_weeks_df = pp.join_tranches_mobility_data(cases_all_weeks_df, deimos_footfall_df)
     
-    # convert mobility metric units from square kilometres to sqare metres
+    # convert mobility metric units from square kilometres to square metres
     cases_mobility_all_weeks_df = pp.convert_units(df = cases_mobility_all_weeks_df, 
                                                    colname = 'worker_visitor_footfall_sqkm',
                                                    factor = 0.000001,
@@ -132,8 +138,22 @@ elif cf.model_type == "time_tranche":
                                                        colname = feature, 
                                                        factor = 0.01)
     
-    # generate the test data set - weeks for which we have mobility data but no cases data
-    test_df = pp.create_test_data(cases_mobility_all_weeks_df, static_df_dropped, deimos_footfall_df)
+    # define dataframe for normalisation by population
+    pop_df = static_df_raw[['LSOA11CD','ALL_PEOPLE']]
+    
+    cases_mobility_all_weeks_df = cases_mobility_all_weeks_df.merge(pop_df, how='inner', on=['LSOA11CD'])
+    
+    # express vaccinations as proportion of LSOA population
+    cases_mobility_all_weeks_df['total_vaccinated_first_dose'] = cases_mobility_all_weeks_df['total_vaccinated_first_dose'].div(cases_mobility_all_weeks_df['ALL_PEOPLE'])
+    cases_mobility_all_weeks_df['total_vaccinated_second_dose'] = cases_mobility_all_weeks_df['total_vaccinated_second_dose'].div(cases_mobility_all_weeks_df['ALL_PEOPLE'])
+    
+    cases_mobility_all_weeks_df.drop('ALL_PEOPLE', axis=1, inplace=True)
+    
+    # generate the test data set - weeks for which we have mobility and vaccination data but no cases data
+    test_df = pp.create_test_data(all_weeks_df = cases_mobility_all_weeks_df, 
+                                  static_df = static_df, 
+                                  deimos_footfall_df = deimos_footfall_df, 
+                                  vax_processed_df = vax_processed_df)
     
     print("Organising the data into time tranches...")
     
@@ -142,6 +162,10 @@ elif cf.model_type == "time_tranche":
     
     # create a 'tranche_order' column for plotting later
     tranches_df = pp.derive_tranche_order(tranches_df)
+    
+    # create excess vaccinations feature
+    tranches_df['vax_2_minus_1'] = tranches_df['total_vaccinated_second_dose'] - tranches_df['total_vaccinated_first_dose']   
+    tranches_df.drop(['total_vaccinated_first_dose', 'total_vaccinated_second_dose'], axis=1, inplace=True)
     
     print("Writing tranche model training and test data to BigQuery...")
     
@@ -158,5 +182,3 @@ static_df.drop(['Area','ALL_PEOPLE'], axis=1, inplace=True)
 
 # write to BigQuery
 static_df.to_gbq(cf.static_data_file, project_id=cf.project_name,if_exists='replace')
-
-    

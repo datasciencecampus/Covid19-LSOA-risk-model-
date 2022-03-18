@@ -29,7 +29,8 @@ df_latest_pred = factory.get('tranche_preds_latest').create_dataframe()
 # Model features
 df_features = factory.get('tranche_model_input').create_dataframe()
 
-###### PROCESS ###########
+# Clip any negative predictions to zero
+df_latest_pred['Predicted_cases_test'] = df_latest_pred['Predicted_cases_test'].clip(lower=0)
 
 # Subset for the columns required in the dashboard
 df_reg_coefs = df_reg_coefs[['Features','Coefficients','tranche', 'travel_cluster','Date']]
