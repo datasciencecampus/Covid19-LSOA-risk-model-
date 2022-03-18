@@ -110,14 +110,14 @@ elif cf.model_type == "time_tranche":
     
     print("Joining vaccination data...")
     
-    df_vax = df_vax_in
+    df_vax = factory.get('lsoa_vaccinations').create_dataframe()
     
     vax_processed_df, cases_all_weeks_df = pp.join_vax_data(cases_all_weeks_df, df_vax)
     
     print("Loading mobility data from BigQuery...")
     
     # load the mobility data from BigQuery
-    deimos_footfall_df = df_deimos_in
+    deimos_footfall_df = factory.get('lsoa_daily_footfall').create_dataframe()
     
     # load and process mobility data
     cases_mobility_all_weeks_df = pp.join_tranches_mobility_data(cases_all_weeks_df, deimos_footfall_df)
