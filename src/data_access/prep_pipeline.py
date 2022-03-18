@@ -408,12 +408,11 @@ def join_vax_data(cases_all_weeks_df, df_vax):
 
     end_date = datetime.strptime(df_vax['Date'].max(), "%Y-%m-%d").date()
 
-    list_of_dates = pd.date_range(strt_date, end_date - timedelta(days=0), freq='7d')
+    list_of_dates = pd.date_range(strt_date, end_date, freq='7d')
 
     list_of_dates = [x.date().strftime('%Y-%m-%d') for x in list_of_dates]
 
     dates_df = pd.DataFrame(list_of_dates, columns=['Date'])
-
 
     vaccn_df_datum_mrgd = []
 
@@ -444,12 +443,6 @@ def join_vax_data(cases_all_weeks_df, df_vax):
     print('Number of null enteries after merging cases with vaccination {}'.format(cases_vax_all_weeks_df[cases_vax_all_weeks_df.isna().any(axis=1)].shape[0]))
 
     cases_vax_all_weeks_df['Date'] = cases_vax_all_weeks_df['Date'].astype(str)
-    
-#     cases_vax_all_weeks_df['vaccine_2_mins_1'] = cases_vax_all_weeks_df['total_vaccinated_second_dose'] - cases_vax_all_weeks_df['total_vaccinated_first_dose']
-#     vaccn_all_tranches_sbset['vaccine_2_mins_1'] = vaccn_all_tranches_sbset['total_vaccinated_second_dose'] - vaccn_all_tranches_sbset['total_vaccinated_first_dose']
-    
-#     vaccn_all_tranches_sbset.drop(['total_vaccinated_first_dose','total_vaccinated_second_dose'], axis=1, inplace=True)
-#     cases_vax_all_weeks_df.drop(['total_vaccinated_first_dose','total_vaccinated_second_dose'], axis=1, inplace=True)
 
     return vaccn_all_tranches_sbset, cases_vax_all_weeks_df
 
@@ -694,8 +687,8 @@ def create_time_tranches(all_weeks_df,
 
         # For each tranche, we evaluate the cumulative vaccination uptake (relative to the previous tranche)
         for x in range(len(tranche_dfs_agg)-1):
-            tranche_dfs_agg[x+1][vax_cols[0]]=tranche_dfs_agg[x+1][vax_cols[0]]+tranche_dfs_agg[x][vax_cols[0]]
-            tranche_dfs_agg[x+1][vax_cols[1]]=tranche_dfs_agg[x+1][vax_cols[1]]+tranche_dfs_agg[x][vax_cols[1]]
+            tranche_dfs_agg[x+1][vax_cols[0]] = tranche_dfs_agg[x+1][vax_cols[0]] + tranche_dfs_agg[x][vax_cols[0]]
+            tranche_dfs_agg[x+1][vax_cols[1]] = tranche_dfs_agg[x+1][vax_cols[1]] + tranche_dfs_agg[x][vax_cols[1]]
 
     # stack each tranche into one dataframe
     all_tranches_df = pd.concat(tranche_dfs_agg).reset_index(drop=True)

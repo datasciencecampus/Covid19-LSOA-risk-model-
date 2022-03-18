@@ -261,15 +261,22 @@ class LSOAVaccinations(IData):
     def create_dataframe(self):
         
         # define query
-        query = "SELECT * FROM `{}`".format(conf.data_location_big_query['vaccination'])
+        query = """SELECT LSOA_OF_RESIDENCE,
+                          vcc_date,
+                          GENDER,
+                          dose_first, 
+                          dose_second, 
+                          booster 
+                    
+                    FROM {} 
+                    WHERE vcc_date >= {}""".format(conf.data_location_big_query['vaccination'], 
+                                                   conf.data_start_date)
         
         query_job = super().client.query(
             query
         )
 
         vaccination_df = query_job.to_dataframe()
-        
-        vaccination_df.drop(columns='null',inplace=True) 
         
         # import 2001 to 2011 LSOA codes lookup
         lsoa_query = "SELECT LSOA01CD, LSOA11CD FROM `ons-hotspot-prod.ingest_geography. lsoa_2001_to_2011_look_up`"
@@ -282,7 +289,7 @@ class LSOAVaccinations(IData):
         vaccination_df = vaccination_df.merge(lsoa_lu, left_on='LSOA_OF_RESIDENCE', right_on='LSOA01CD', how='outer') 
 
         # fill missing values with 2011 codes
-        vaccination_df['LSOA11CD'] = vaccination_df['LSOA11CD'].fillna(value=vaccination_df.LSOA_OF_RESIDENCE)  
+        vaccination_df['LSOA11CD'] = vaccination_df['LSOA11CD'].fillna(vaccination_df['LSOA_OF_RESIDENCE'])  
     
         # drop rows where LSOA code is missing
         vaccination_df = vaccination_df[~vaccination_df['LSOA_OF_RESIDENCE'].isna()]
@@ -291,66 +298,38 @@ class LSOAVaccinations(IData):
         vaccination_df = vaccination_df[vaccination_df['LSOA11CD'].str.startswith('E')]
 
         # check that all LSOAs are present in the data
-        assert len(vaccination_df.LSOA11CD.unique()) == conf.n_lsoa, "Invalid LSOAs,the number of unique LSOAs does not equal the value for n_lsoa in the config file"
+        assert vaccination_df['LSOA11CD'].nunique() == conf.n_lsoa, "Invalid LSOAs,the number of unique LSOAs does not equal the value for n_lsoa in the config file"
 
         # drop features that are not needed
         vaccination_df = vaccination_df.drop(columns=['LSOA_OF_RESIDENCE','LSOA01CD'])
         
-        #############
-
-        # seperate male and female
-        df_vaccination_male = vaccination_df[vaccination_df['GENDER'] == 'Male']      
-        df_vaccination_female = vaccination_df[vaccination_df['GENDER'] == 'Female']
-
-        # add suffixes 
-        keep_same = {'LSOA11CD', 'vcc_date','GENDER'}
-        
-        df_vaccination_male.columns = ['{}{}'.format(c, '' if c in keep_same else '_vaccine_male')
-                  for c in df_vaccination_male.columns]
-
-        df_vaccination_female.columns = ['{}{}'.format(c, '' if c in keep_same else '_vaccine_female')
-                  for c in df_vaccination_female.columns]
-
-        # merge male and female dats sets back together
-        vaccination_df = df_vaccination_male.merge(df_vaccination_female, how='outer',
-                                                 on=['LSOA11CD', 'vcc_date']).drop(columns=['GENDER_x', 'GENDER_y'])
-
-        vaccination_df.fillna(0.0, inplace=True)
-
-        # filter for England
-        vaccination_df = vaccination_df[vaccination_df['LSOA11CD'].str.startswith('E')].reset_index(drop=True)
-
+        # drop records where GENDER == 'Unknown' and drop the GENDER column
+        vaccination_df = vaccination_df[vaccination_df['GENDER'] != 'Unknown']
+        vaccination_df.drop('GENDER', axis=1, inplace=True)
 
         # aggregate vaccinations records at LSOA level
         vaccination_df.rename(columns={'vcc_date':'Date'},inplace=True)
 
-        cols_to_aggregate = ['dose_first_vaccine_male',
-                              'dose_first_vaccine_female',
-                              'dose_second_vaccine_male',
-                              'dose_second_vaccine_female',
-                              'booster_vaccine_male',
-                              'booster_vaccine_female'] 
+        cols_to_aggregate = ['dose_first',
+                             'dose_second',
+                             'booster'] 
         
-        # aggregate to weekly totals
+        # group by LSOA 2011 code to remove any reference to 2001 LSOA codes
         vaccination_df = vaccination_df.groupby(['Date','LSOA11CD'])[cols_to_aggregate].sum().reset_index()
-
-        # set dtype and filter for date range defined in config file
-        vaccination_df['Date'] = pd.to_datetime(vaccination_df['Date'])
-        vaccination_df = vaccination_df[vaccination_df['Date'] >= pd.to_datetime(conf.data_start_date)].reset_index(drop=True) 
         
-        # compute total vaccinated people
-        vaccination_df['total_vaccinated_first_dose'] = vaccination_df['dose_first_vaccine_male'] + vaccination_df['dose_first_vaccine_female']
-        vaccination_df['total_vaccinated_second_dose'] = vaccination_df['dose_second_vaccine_male'] + vaccination_df['dose_second_vaccine_female']
-        vaccination_df['total_vaccinated_booster'] = vaccination_df['booster_vaccine_male'] + vaccination_df['booster_vaccine_female']
-        
-        # Proportion of vaccinationed populaition (cumulative sum)
+        # proportion of vaccinationed populaition (cumulative sum)
         vaccination_df_cumsum = vaccination_df.copy()
-        vaccination_df_cumsum = vaccination_df_cumsum.sort_values(by=['LSOA11CD','Date'])
-        vaccination_df_cumsum = vaccination_df_cumsum.groupby(["LSOA11CD",'Date']).sum().groupby(level=0).cumsum().reset_index()
-        vaccination_df_cumsum = vaccination_df_cumsum.rename(columns={'total_vaccinated_second_dose':'dbl_vacc_cumsum',
-                                                                   'total_vaccinated_booster':'trpl_vacc_cumsum'})[['LSOA11CD','Date','dbl_vacc_cumsum','trpl_vacc_cumsum']]
+        vaccination_df_cumsum = vaccination_df_cumsum.sort_values(by=['LSOA11CD', 'Date'])
+        vaccination_df_cumsum = vaccination_df_cumsum.groupby(['LSOA11CD', 'Date']).sum().groupby(level=0).cumsum().reset_index()
+        vaccination_df_cumsum = vaccination_df_cumsum.rename(columns={'dose_second':'dbl_vacc_cumsum',
+                                                                      'booster':'trpl_vacc_cumsum'})[['LSOA11CD', 'Date', 'dbl_vacc_cumsum', 'trpl_vacc_cumsum']]
         # merge vaccinated counts and cumulative sums
-        vaccination_df = vaccination_df.merge(vaccination_df_cumsum, on=['LSOA11CD','Date'],how='left')
+        vaccination_df = vaccination_df.merge(vaccination_df_cumsum, on=['LSOA11CD', 'Date'], how='left')
+        
+        # make the column names more informative
+        vaccination_df.rename(columns={'dose_first':'total_vaccinated_first_dose', 
+                                       'dose_second':'total_vaccinated_second_dose',
+                                       'booster':'total_vaccinated_booster'}, inplace=True)
         
         # define columns to keep
         few_cols_vacct = ['Date', 
@@ -363,16 +342,15 @@ class LSOAVaccinations(IData):
         
         # subset for the columns listed
         vaccination_df = vaccination_df[few_cols_vacct]
-
-        # compute daily proportion of population vaccinated
-        vaccination_df = vaccination_df.groupby(['Date','LSOA11CD'])['total_vaccinated_first_dose','total_vaccinated_second_dose','total_vaccinated_booster','dbl_vacc_cumsum','trpl_vacc_cumsum'].\
-        sum().reset_index()
+        
+        # convert to datetime
+        vaccination_df['Date'] = pd.to_datetime(vaccination_df['Date'])
 
         # transform the date to the Sunday of the same week
         vaccination_df['Date'] = vaccination_df['Date'].apply(lambda x: dyn.end_of_week(x))
 
         # aggregate to weekly 
-        vaccination_df=vaccination_df.groupby(['Date','LSOA11CD']).agg(({'total_vaccinated_first_dose':'sum',
+        vaccination_df = vaccination_df.groupby(['Date', 'LSOA11CD']).agg(({'total_vaccinated_first_dose':'sum',
                                                                                  'total_vaccinated_second_dose':'sum',
                                                                                  'total_vaccinated_booster':'sum',
                                                                                  'dbl_vacc_cumsum':'max',
@@ -380,8 +358,6 @@ class LSOAVaccinations(IData):
         
         vaccination_df['Date'] = pd.to_datetime(vaccination_df['Date'])
 
-        del vaccination_df_cumsum
-        
         return vaccination_df
 
 class StaticSubset(IData):
@@ -826,9 +802,4 @@ class DeimosEndTrip(IData):
 
         trip_end_count_lsoa_daily['Date'] = pd.to_datetime(trip_end_count_lsoa_daily['Date'])
 
-
-    
-
-
-        
         return trip_end_count_lsoa_daily
