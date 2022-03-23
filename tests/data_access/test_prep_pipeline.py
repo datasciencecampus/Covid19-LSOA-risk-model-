@@ -12,7 +12,6 @@ import prep_pipeline as pp
 import config_unit_testing as cf
 from data_access.data_factory import DataFactory as factory
 
-
 def test_read_data_static():
     # read in dataframe to test function against
     static_result = factory.get('unit_test_static').create_dataframe()
@@ -58,7 +57,7 @@ def test_read_data_dynamic_all(dynamic_result):
     pp.sort_cols(dynamic_df, ['LSOA11CD', 'Date'])
     
     pd.testing.assert_frame_equal(dynamic_result, dynamic_df)
-    
+
 def test_geo_merge_static():
     geom_df = factory.get('LSOA_2011').create_dataframe()
     
@@ -89,7 +88,7 @@ def test_normalise_data():
     
     # check that output of normlise_data function is as expected
     pd.testing.assert_frame_equal(df_normalised, df_result)
-    
+
 def test_ffill_cumsum():
     # input dataframe
     df = factory.get('unit_test_ffill_df').create_dataframe()
@@ -110,7 +109,7 @@ def test_ffill_cumsum():
     pd.testing.assert_frame_equal(df_one, df_one_result)
     
     pd.testing.assert_frame_equal(df_two, df_two_result)
-    
+
 def test_sum_features():
     # input dataframe
     df = factory.get('unit_test_sum_features').create_dataframe()
@@ -121,7 +120,7 @@ def test_sum_features():
     df = pp.sum_features(df, dic = cf.sum_dic)
     
     pd.testing.assert_frame_equal(df, df_result)
-    
+
 def test_apply_timelag():
     # input dataframes
     dynamic_df = factory.get('unit_test_timelag_dynamic').create_dataframe()
@@ -159,7 +158,7 @@ def static_df():
     df = factory.get('unit_test_static_for_cases').create_dataframe()
 
     return df
-    
+
 def test_join_cases_to_static_data(static_df, cases_static):
     
     df = pp.join_cases_to_static_data(static_df, table='unit_test_cases')
@@ -190,6 +189,39 @@ def test_derive_week_number(cases_static, cases_static_week):
     
     pd.testing.assert_frame_equal(df, cases_static_week)
     
+# target 1 of 2 for join_vax_data
+# and input for create_test_data
+@pytest.fixture
+def vax_processed_df():
+    
+    df = factory.get('unit_test_vaccinations_processed').create_dataframe()
+    
+    pp.sort_cols(df, ['LSOA11CD', 'Date'])
+    
+    return df
+
+# target 2 of 2 for join_vax_data
+# and input for join_tranches_mobility_data 
+@pytest.fixture
+def cases_static_week_vax():
+    
+    df = factory.get('unit_test_cases_static_week_vax').create_dataframe()
+    
+    pp.sort_cols(df, ['LSOA11CD', 'Date'])
+    
+    return df
+    
+def test_join_vax_data(cases_static_week, vax_processed_df, cases_static_week_vax):
+    
+    # Read in raw vaccinations data (used only once)
+    vaccinations = factory.get('unit_test_vaccinations').create_dataframe()
+    pp.sort_cols(vaccinations, ['LSOA11CD', 'Date'])
+    
+    df_vax, df_cases_vax = pp.join_vax_data(cases_static_week, vaccinations)
+    
+    pd.testing.assert_frame_equal(df_vax, vax_processed_df)
+    pd.testing.assert_frame_equal(df_cases_vax, cases_static_week_vax)
+    
 # input for joint_tranches_mobility_data and create_test_data
 @pytest.fixture
 def deimos_footfall():
@@ -207,7 +239,7 @@ def deimos_footfall():
 @pytest.fixture
 def tranches_mobility():
     
-    df = factory.get('unit_test_deimos_cases').create_dataframe()
+    df = factory.get('unit_test_deimos_cases_vax').create_dataframe()
     
     pp.sort_cols(df, ['LSOA11CD', 'Date'])
     
@@ -235,9 +267,9 @@ def time_tranche_df():
     
     return df
     
-def test_join_tranches_mobility_data(cases_static_week, deimos_footfall, tranches_mobility):
+def test_join_tranches_mobility_data(cases_static_week_vax, deimos_footfall, tranches_mobility):
     
-    df = pp.join_tranches_mobility_data(cases_static_week, deimos_footfall)
+    df = pp.join_tranches_mobility_data(cases_static_week_vax, deimos_footfall)
     
     pd.testing.assert_frame_equal(df, tranches_mobility)
     
@@ -265,7 +297,7 @@ def test_convert_units_alt(tranches_mobility):
     
     pd.testing.assert_frame_equal(df, df_result)
     
-def test_create_test_data(convert_units_df, static_df, deimos_footfall):
+def test_create_test_data(convert_units_df, static_df, deimos_footfall, vax_processed_df):
     
     # read in target dataframe
     df_result = factory.get('unit_test_tranche_test').create_dataframe()
@@ -273,7 +305,7 @@ def test_create_test_data(convert_units_df, static_df, deimos_footfall):
     
     deimos_footfall['Date'] = deimos_footfall['Date'].astype(str)
     
-    df = pp.create_test_data(convert_units_df, static_df, deimos_footfall,
+    df = pp.create_test_data(convert_units_df, static_df, deimos_footfall, vax_processed_df,
                             idbr_features=cf.tranche_model_idbr_features)
     pp.sort_cols(df, ['LSOA11CD', 'Date'])
     

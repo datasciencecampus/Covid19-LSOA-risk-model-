@@ -567,7 +567,7 @@ def create_test_data(all_weeks_df, static_df, deimos_footfall_df, vax_processed_
     
     # the test set contains only timestamps where footfall data is available, but not cases data
     test_df = footfall_static_vax_df[footfall_static_vax_df['Date'] > date_cutoff].reset_index(drop=True)
-    
+ 
     # convert units of mobility features to align with the training data
     test_df = convert_units(df = test_df, 
                             colname = 'worker_visitor_footfall_sqkm',
@@ -589,7 +589,7 @@ def create_test_data(all_weeks_df, static_df, deimos_footfall_df, vax_processed_
     
     # drop the numeric fields that are no longer needed
     test_df.drop(['ALL_PEOPLE', 'total_vaccinated_first_dose', 'total_vaccinated_second_dose', 'Area'], axis=1, inplace=True)  
-        
+    
     # store the test data date range as a string
     test_data_range = test_df['Date'].min() + '-' + test_df['Date'].max()
     
