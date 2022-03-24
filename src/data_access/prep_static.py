@@ -1,5 +1,7 @@
 from data_access.idata import IData
 import pandas as pd
+from utils import config as cf
+
 
 class StaticVars(IData):
     "A Concrete Class that implements the IProduct interface"
@@ -7,9 +9,11 @@ class StaticVars(IData):
         self.name = "Static Vars"
     def create_dataframe(self):
         
+        static_data_location = cf.data_location_big_query['static']
+        
         query_job = super().client.query(
-            """
-            select * from `ons-hotspot-prod.ingest_risk_model.risk_model_lsoa`
+            f"""
+            select * from `{static_data_location}`
             """
         )
 
