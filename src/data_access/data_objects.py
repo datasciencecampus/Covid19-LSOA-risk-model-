@@ -1,18 +1,16 @@
-
 import os
 import sys
 import pandas as pd
 from google.cloud import storage
 import geopandas as gpd
 from tqdm import tqdm
-import fnmatch
 
 # Import from local data files
 current_path = os.path.abspath('.')
 sys.path.append(os.path.dirname(current_path))
 
 from data_access.idata import IData
-import utils.config as conf
+import utils.config as cf
 import utils.dynamic as dyn
 import utils.model as md
 import utils.data as dt
@@ -24,14 +22,17 @@ class LSOA2011(IData):
     "A Class creating a static vars dataframe"
     def __init__(self):
         self.name = "data description"
-    def create_dataframe(self):
         
+    def create_dataframe(self):
+                
         client = storage.Client()
+        
         # set the bucket
         geography_bucket = 'hotspot-prod-geodata'
-        bucket = client.get_bucket(geography_bucket)
+        bucket = client.get_bucket(cf.geography_bucket)
+        
         # Get the LSOA boundaries and download to store locally (on notebook)
-        blob = bucket.get_blob('LSOA_2011_EW_BSC.geojson')
+        blob = bucket.get_blob(cf.geography_filename)
         blob.download_to_filename('LSOA_2011')
         LSOA_2011_map = gpd.read_file('LSOA_2011')
         return LSOA_2011_map
@@ -44,12 +45,12 @@ class AggregatedTestsLSOA(IData):
         self.name = "data description"
     def create_dataframe(self):
         
-        query = """ 
+        query = f""" 
             SELECT Specimen_Date, Lower_Super_Output_Area_Code, SUM(positive_test)
-            FROM `{}`
-            WHERE Specimen_Date >={}
+            FROM `{cf.data_location_big_query['cases']}`
+            WHERE Specimen_Date >= {cf.data_start_date}
             GROUP BY Lower_Super_Output_Area_Code, Specimen_Date
-        """.format(conf.data_location_big_query['cases'], conf.data_start_date) #TOC: Added in user defined table and date from config 
+        """
 
         
         query_job = super().client.query(
@@ -58,105 +59,114 @@ class AggregatedTestsLSOA(IData):
 
         cases_df = query_job.to_dataframe()
         
-
-        cases_df.rename(columns={'f0_':'COVID_Cases'},inplace=True)
-        cases_df['Specimen_Date']=pd.to_datetime(cases_df['Specimen_Date'])
+        # convert date format
+        cases_df['Specimen_Date'] = pd.to_datetime(cases_df['Specimen_Date'])
+        
+        # rename columns
+        cases_df.rename(columns={'f0_':'COVID_Cases'},inplace=True)       
         cases_df.rename(columns={'Specimen_Date':'Date'},inplace=True)
         cases_df.rename(columns={'Lower_Super_Output_Area_Code':'LSOA11CD'},inplace=True)
-        cases_df_cumsum=cases_df.copy()
-        cases_df_cumsum=cases_df_cumsum.sort_values(by=['LSOA11CD','Date'])  #sort by lsoa and week
-        cases_df_cumsum=cases_df_cumsum.groupby(["LSOA11CD",'Date']).sum().groupby(level=0).cumsum().reset_index()
-        cases_df_cumsum=cases_df_cumsum.rename(columns={'COVID_Cases':'cases_cumsum'})[['LSOA11CD','Date','cases_cumsum']]
-        cases_df=cases_df.merge(cases_df_cumsum, how='left', on=['LSOA11CD', 'Date'])
-        cases_df['Date']=cases_df['Date'].apply(lambda x: dyn.end_of_week(x))
-        cases_df=cases_df.groupby(['Date','LSOA11CD']).agg(({'COVID_Cases':'sum', 'cases_cumsum':'max'})).reset_index()
-        cases_df['Date']=pd.to_datetime(cases_df['Date'])
+        
+        # calculate cumulative sum of positive tests
+        cases_df_cumsum = cases_df.copy()
+        cases_df_cumsum = cases_df_cumsum.sort_values(by=['LSOA11CD','Date'])
+        cases_df_cumsum = cases_df_cumsum.groupby(["LSOA11CD",'Date']).sum().groupby(level=0).cumsum().reset_index()
+        cases_df_cumsum = cases_df_cumsum.rename(columns={'COVID_Cases':'cases_cumsum'})[['LSOA11CD','Date','cases_cumsum']]
+        
+        # merge with the daily counts
+        cases_df = cases_df.merge(cases_df_cumsum, how='left', on=['LSOA11CD', 'Date'])
+        
+        # snap dates to the Sunday of the week and aggregate
+        cases_df['Date'] = cases_df['Date'].apply(lambda x: dyn.end_of_week(x))
+        cases_df = cases_df.groupby(['Date','LSOA11CD']).agg(({'COVID_Cases':'sum', 'cases_cumsum':'max'})).reset_index()
+        cases_df['Date'] = pd.to_datetime(cases_df['Date'])
 
         return cases_df
 
+
     
 
-class FlowsMarsData(IData):
-    "A Class creating a static vars dataframe"
-    def __init__(self):
-        self.name = "Dynamic static variables normalized"
-    '''
-    This query and view present the data for mobilty flows in and out of LSOAs. 
-    The calculations as essentially as follows:
-    1. we first get the volume data aggregated for each of the in and out MSOAs. This is done in another view
-       for brevity sake. See the query underlying the `wip.mars_daily_trips_from_and_to_home` view. 
-    2. then we group by the `ons-hotspot-prod.ingest_risk_model.mid_year_pop19_lsoa` data by MSOA to get the 
-       MSOA population, then we divide the LSOA population in the same data by that MSOA population numbers to get 
-       a weight value that we will use to disaggregate the volume
-    3. we then do a left join from this weight data based on population onto the volme data.
-    4. finally we multiply the inflow and outflow volumes at MSOA level by the weights at LSOA level. 
+# class FlowsMarsData(IData):
+#     "A Class creating a static vars dataframe"
+#     def __init__(self):
+#         self.name = "Dynamic static variables normalized"
+#     '''
+#     This query and view present the data for mobilty flows in and out of LSOAs. 
+#     The calculations as essentially as follows:
+#     1. we first get the volume data aggregated for each of the in and out MSOAs. This is done in another view
+#        for brevity sake. See the query underlying the `wip.mars_daily_trips_from_and_to_home` view. 
+#     2. then we group by the `ons-hotspot-prod.ingest_risk_model.mid_year_pop19_lsoa` data by MSOA to get the 
+#        MSOA population, then we divide the LSOA population in the same data by that MSOA population numbers to get 
+#        a weight value that we will use to disaggregate the volume
+#     3. we then do a left join from this weight data based on population onto the volme data.
+#     4. finally we multiply the inflow and outflow volumes at MSOA level by the weights at LSOA level. 
 
-    '''
+#     '''
 
-    def create_dataframe(self):
-        query = """
-            SELECT
-              date,
-              msoa,
-              lsoa11cd AS LSOA11CD,
-              outflow_volume AS msoa_outflow_volume,
-              inflow_volume AS msoa_inflow_volume,
+#     def create_dataframe(self):
+#         query = """
+#             SELECT
+#               date,
+#               msoa,
+#               lsoa11cd AS LSOA11CD,
+#               outflow_volume AS msoa_outflow_volume,
+#               inflow_volume AS msoa_inflow_volume,
 
-              /* multiply volume by the weight here */
-              outflow_volume * weight as lsoa_outflow_volume,
-              inflow_volume * weight as lsoa_inflow_volume,
-              weight as msoa_to_lsoa_weight
-            FROM
-              `{}`
-            JOIN (
-              SELECT
-                tablea.lsoa11cd,
-                tablea.msoa11cd,
+#               /* multiply volume by the weight here */
+#               outflow_volume * weight as lsoa_outflow_volume,
+#               inflow_volume * weight as lsoa_inflow_volume,
+#               weight as msoa_to_lsoa_weight
+#             FROM
+#               `{}`
+#             JOIN (
+#               SELECT
+#                 tablea.lsoa11cd,
+#                 tablea.msoa11cd,
 
-                /* divide the all_people (ASSUMPTION: the all_people refers to LSOA level population) by 
-                the MSOA population to get the % weight the LSOA represents of the total MSOA*/
-                all_people / msoa_population AS weight
-              FROM (
-                SELECT
-                  LSOA11CD,
-                  MSOA11CD,
-                  ALL_PEOPLE
-                FROM
-                  `ons-hotspot-prod.ingest_risk_model.mid_year_pop19_lsoa`) tableA
-              LEFT JOIN (
-                SELECT
-                  msoa11cd,
-                  SUM(ALL_PEOPLE) AS msoa_population
-                FROM
-                  `ons-hotspot-prod.ingest_risk_model.mid_year_pop19_lsoa`
-                GROUP BY
-                  msoa11cd) tableB
-              ON
-                tablea.msoa11cd = tableb.msoa11cd) tableB
-            ON
-              msoa = tableB.msoa11cd
-            """.format(conf.data_location_big_query['mobility_MARS']) #TOC: Added in user defined table from config 
-        query_job = super().client.query(
-            query
-        )
+#                 /* divide the all_people (ASSUMPTION: the all_people refers to LSOA level population) by 
+#                 the MSOA population to get the % weight the LSOA represents of the total MSOA*/
+#                 all_people / msoa_population AS weight
+#               FROM (
+#                 SELECT
+#                   LSOA11CD,
+#                   MSOA11CD,
+#                   ALL_PEOPLE
+#                 FROM
+#                   `ons-hotspot-prod.ingest_risk_model.mid_year_pop19_lsoa`) tableA
+#               LEFT JOIN (
+#                 SELECT
+#                   msoa11cd,
+#                   SUM(ALL_PEOPLE) AS msoa_population
+#                 FROM
+#                   `ons-hotspot-prod.ingest_risk_model.mid_year_pop19_lsoa`
+#                 GROUP BY
+#                   msoa11cd) tableB
+#               ON
+#                 tablea.msoa11cd = tableb.msoa11cd) tableB
+#             ON
+#               msoa = tableB.msoa11cd
+#             """.format(conf.data_location_big_query['mobility_MARS']) #TOC: Added in user defined table from config 
+#         query_job = super().client.query(
+#             query
+#         )
 
-        df_flows_mars_data = query_job.to_dataframe()
+#         df_flows_mars_data = query_job.to_dataframe()
         
-        df_flows_mars_data.rename(columns={'date':'Date'},inplace=True)
-        df_flows_mars_data['Date']=pd.to_datetime(df_flows_mars_data['Date'])
-        df_flows_mars_data=df_flows_mars_data[df_flows_mars_data['Date']>=pd.to_datetime(conf.data_start_date)].reset_index(drop=True)
+#         df_flows_mars_data.rename(columns={'date':'Date'},inplace=True)
+#         df_flows_mars_data['Date']=pd.to_datetime(df_flows_mars_data['Date'])
+#         df_flows_mars_data=df_flows_mars_data[df_flows_mars_data['Date']>=pd.to_datetime(conf.data_start_date)].reset_index(drop=True)
         
-        df_flows_mars_data=df_flows_mars_data.groupby(['Date', 'LSOA11CD'])\
-        [['lsoa_inflow_volume']].sum().reset_index()
+#         df_flows_mars_data=df_flows_mars_data.groupby(['Date', 'LSOA11CD'])\
+#         [['lsoa_inflow_volume']].sum().reset_index()
 
-        # WEEKLY SAMPLING
-        df_flows_mars_data['Date']=df_flows_mars_data['Date'].apply(lambda x: dyn.end_of_week(x))
+#         # WEEKLY SAMPLING
+#         df_flows_mars_data['Date']=df_flows_mars_data['Date'].apply(lambda x: dyn.end_of_week(x))
 
-        df_flows_mars_data=df_flows_mars_data.groupby(['Date', 'LSOA11CD'])[['lsoa_inflow_volume']].sum().reset_index()
+#         df_flows_mars_data=df_flows_mars_data.groupby(['Date', 'LSOA11CD'])[['lsoa_inflow_volume']].sum().reset_index()
         
-        df_flows_mars_data['Date']=pd.to_datetime(df_flows_mars_data['Date'])
+#         df_flows_mars_data['Date']=pd.to_datetime(df_flows_mars_data['Date'])
         
-        return df_flows_mars_data
+#         return df_flows_mars_data
 
 class LSOA_MidYear(IData):
     "A Concrete Class that implements the IProduct interface"
@@ -170,28 +180,28 @@ class LSOA_MidYear(IData):
     
     def create_dataframe(self):
         
+        lsoa_midyear_2019_data_location = cf.data_location_big_query['lsoa_midyear_population_2019']
+        
         query_job = super().client.query(
-            """
+            f"""
             SELECT *
-            FROM `ons-hotspot-prod.ingest_risk_model.mid_year_pop19_lsoa` 
+            FROM `{lsoa_midyear_2019_data_location}` 
             """
         )
 
         age_df = query_job.to_dataframe()
         
         
-        age_df_subset=age_df.loc[:,'LSOA11CD':'MF_AGE_90_PLUS']
-        age_df_subset.columns=age_df_subset.columns.str.replace('MF_AGE_',"")
-
-    
+        age_df_subset = age_df.loc[:,'LSOA11CD':'MF_AGE_90_PLUS']
+        age_df_subset.columns = age_df_subset.columns.str.replace('MF_AGE_',"")
 
         #bin ages
-        binned=age_df_subset.loc[:,'LSOA11CD':'ALL_PEOPLE']
-        #age_bins=[['0','3'],['4','11'],['12','18'],['19','30'],['31','50'],['51','70'],['71','90_PLUS']]
+        binned = age_df_subset.loc[:,'LSOA11CD':'ALL_PEOPLE']
         
-        age_bins=[['0','12'],['13','17'],['18','29'],['30','39'],['40','49'],
-                  ['50','54'],['55','59'],['60','64'],['65','69'],['70','74'],
-                  ['75','79'],['80','90_PLUS']]
+        
+        age_bins = [['0','12'],['13','17'],['18','29'],['30','39'],['40','49'],
+                   ['50','54'],['55','59'],['60','64'],['65','69'],['70','74'],
+                   ['75','79'],['80','90_PLUS']]
 
       
         binned = self.__bin_ages(age_df_subset, binned, age_bins)
@@ -205,7 +215,10 @@ class MobilityClustersProcessed(IData):
     def __init__(self):
         self.name = "data"
     def create_dataframe(self):
-        query = "SELECT * FROM `ons-hotspot-prod.ingest_geography.lsoa_mobility_cluster_ew_lu`"
+        
+        mobility_clusters_processed_location = cf.data_location_big_query['mobility_clusters_processed']
+        
+        query = f"SELECT * FROM `{mobility_clusters_processed_location}`"
         
         query_job = super().client.query(
             query
@@ -219,6 +232,7 @@ class MobilityClustersProcessed(IData):
         
         return travel_clusters
 
+    
 class LSOADailyFootfall(IData):
     def __init__(self):
         self.name = "data"
@@ -261,16 +275,15 @@ class LSOAVaccinations(IData):
     def create_dataframe(self):
         
         # define query
-        query = """SELECT LSOA_OF_RESIDENCE,
+        query = f"""SELECT LSOA_OF_RESIDENCE,
                           vcc_date,
                           GENDER,
                           dose_first, 
                           dose_second, 
                           booster 
                     
-                    FROM {} 
-                    WHERE vcc_date >= {}""".format(conf.data_location_big_query['vaccination'], 
-                                                   conf.data_start_date)
+                    FROM `{cf.data_location_big_query['vaccination']}` 
+                    WHERE vcc_date >= {cf.data_start_date}"""
         
         query_job = super().client.query(
             query
@@ -298,7 +311,7 @@ class LSOAVaccinations(IData):
         vaccination_df = vaccination_df[vaccination_df['LSOA11CD'].str.startswith('E')]
 
         # check that all LSOAs are present in the data
-        assert vaccination_df['LSOA11CD'].nunique() == conf.n_lsoa, "Invalid LSOAs,the number of unique LSOAs does not equal the value for n_lsoa in the config file"
+        assert vaccination_df['LSOA11CD'].nunique() == cf.n_lsoa, "Invalid LSOAs,the number of unique LSOAs does not equal the value for n_lsoa in the config file"
 
         # drop features that are not needed
         vaccination_df = vaccination_df.drop(columns=['LSOA_OF_RESIDENCE','LSOA01CD'])
@@ -360,37 +373,37 @@ class LSOAVaccinations(IData):
 
         return vaccination_df
 
-class StaticSubset(IData):
-    def __init__(self):
-        self.name = "data"
-    def create_dataframe(self):
-        table = conf.static_data_file
-        col_list = ', '.join(conf.static_subset)
-        query = f"SELECT {col_list}  FROM `{table}`"
+# class StaticSubset(IData):
+#     def __init__(self):
+#         self.name = "data"
+#     def create_dataframe(self):
+#         table = cf.static_data_file
+#         col_list = ', '.join(cf.static_subset)
+#         query = f"SELECT {col_list}  FROM `{table}`"
         
-        query_job = super().client.query(
-            query
-        )  
-        df = query_job.to_dataframe()
-        df=df[df['LSOA11CD'].str.startswith('E')].reset_index(drop=True)
-        df = df.drop_duplicates(subset=['LSOA11CD'])
-        df['Country']='England'
+#         query_job = super().client.query(
+#             query
+#         )  
+#         df = query_job.to_dataframe()
+#         df=df[df['LSOA11CD'].str.startswith('E')].reset_index(drop=True)
+#         df = df.drop_duplicates(subset=['LSOA11CD'])
+#         df['Country']='England'
         
 
-        return df
+#         return df
 
-class StaticNormalised(IData):
-    def __init__(self):
-        self.name = "Static data which has been normalised"
-    def create_dataframe(self):
-        table = conf.static_data_file
-        query = f"SELECT * FROM `{table}`"
+# class StaticNormalised(IData):
+#     def __init__(self):
+#         self.name = "Static data which has been normalised"
+#     def create_dataframe(self):
+#         table = cf.static_data_file
+#         query = f"SELECT * FROM `{table}`"
         
-        query_job = super().client.query(
-            query
-        )  
-        df = query_job.to_dataframe()
-        return df
+#         query_job = super().client.query(
+#             query
+#         )  
+#         df = query_job.to_dataframe()
+#         return df
 
 
 class AllTranches(IData):
@@ -398,7 +411,7 @@ class AllTranches(IData):
         self.name = "data"
     def create_dataframe(self):
         
-        table = conf.static_data_file
+        table = cf.static_data_file
     
         query_static = f"SELECT * FROM `{table}`"
         query_job_static = super().client.query(
@@ -406,7 +419,7 @@ class AllTranches(IData):
         ) 
         static_variables_df = query_job_static.to_dataframe()
         
-        table = conf.lagged_dynamic_non_stationary
+        table = cf.lagged_dynamic_non_stationary
         
         query_dynamic = f"SELECT * FROM `{table}`"
         query_job_dynamic = super().client.query(
@@ -424,7 +437,7 @@ class AllTranches(IData):
 
         # Choose a specific date to start the risk model training from
 
-        cut_off_datum=conf.model_start_date
+        cut_off_datum=cf.model_start_date
 
         df_all_tranches_dynamic_static['Date']=pd.to_datetime(df_all_tranches_dynamic_static['Date'])
 
@@ -492,7 +505,7 @@ class DynamicChangesWeekly(IData):
     def __init__(self):
         self.name = "data"
     def create_dataframe(self):
-        table = conf.project_name + '.' + conf.risk_pred + conf.model_suffixes['static_main']
+        table = cf.project_name + '.' + cf.risk_pred + cf.model_suffixes['static_main']
         
         query = f"SELECT * FROM `{table}`"
         query_job = super().client.query(
@@ -536,7 +549,7 @@ class DynamicChangesWeekly(IData):
        
         print('Vaccination data preparation for dynamic training....Started')
         #Cumulative vaccine from previous weeks
-        dynamic_colmns_vaccine=['LSOA11CD','Date']+conf.dynamic_vacc
+        dynamic_colmns_vaccine=['LSOA11CD','Date'] + cf.dynamic_vacc
 
         # CONCAT cumulative vaccine DATA (FROM THE PREVIOUS WEEK) FOR ALL THE LSOA
         cum_vaccine_df=md.cumulative_data(df_all_tranches_sbset, dynamic_colmns_vaccine)
@@ -545,7 +558,7 @@ class DynamicChangesWeekly(IData):
         
         print('Mobility data preparation for dynamic training....Started')
         #Change in mobility indicators from previous weeks
-        dynamic_colmns_mobility=['LSOA11CD','Date']+conf.dynamic_mobility
+        dynamic_colmns_mobility=['LSOA11CD','Date'] + cf.dynamic_mobility
 
         # CONCAT CHANGE in mobility DATA (FROM THE PREVIOUS WEEK) FOR ALL THE LSOA
         change_mobility_df=md.difference_data(df_all_tranches_sbset, dynamic_colmns_mobility)
@@ -568,32 +581,32 @@ class DynamicChangesWeekly(IData):
 # static residual wip tables
 # ons-hotspot-prod.wip.multi_grp_coef_zir_only_static_main
 
-class StaticChangesWeekly(IData):
-    def __init__(self):
-        self.name = "data"
-    def create_dataframe(self):
-        query = "SELECT * FROM `ons-hotspot-prod.wip.multi_grp_coef_no_zir_only_static_main`"
-        query_job = super().client.query(
-            query
-        )
-        df_coef_tc_all_week_static_zir = query_job.to_dataframe()
-        return df_coef_tc_all_week_static_zir
+# class StaticChangesWeekly(IData):
+#     def __init__(self):
+#         self.name = "data"
+#     def create_dataframe(self):
+#         query = "SELECT * FROM `ons-hotspot-prod.wip.multi_grp_coef_no_zir_only_static_main`"
+#         query_job = super().client.query(
+#             query
+#         )
+#         df_coef_tc_all_week_static_zir = query_job.to_dataframe()
+#         return df_coef_tc_all_week_static_zir
 
-# If zero-inflated regression is used for static training then
-# apprpriate changes need to be made in the location of the
-# static residual wip tables
-# ons-hotspot-prod.wip.multi_grp_coef_ci_zir_only_static_main
+# # If zero-inflated regression is used for static training then
+# # apprpriate changes need to be made in the location of the
+# # static residual wip tables
+# # ons-hotspot-prod.wip.multi_grp_coef_ci_zir_only_static_main
 
-class StaticChangesWeekly_ci(IData):
-    def __init__(self):
-        self.name = 'data'
-    def create_dataframe(self):
-        query = "SELECT * FROM `ons-hotspot-prod.wip.multi_grp_coef_ci_no_zir_only_static_main`"
-        query_job = super().client.query(
-            query
-        )
-        df_coef_ci_tc_all_week_static_zir = query_job.to_dataframe()
-        return df_coef_ci_tc_all_week_static_zir
+# class StaticChangesWeekly_ci(IData):
+#     def __init__(self):
+#         self.name = 'data'
+#     def create_dataframe(self):
+#         query = "SELECT * FROM `ons-hotspot-prod.wip.multi_grp_coef_ci_no_zir_only_static_main`"
+#         query_job = super().client.query(
+#             query
+#         )
+#         df_coef_ci_tc_all_week_static_zir = query_job.to_dataframe()
+#         return df_coef_ci_tc_all_week_static_zir
 
 
 class MSOA2011(IData):
@@ -612,24 +625,28 @@ class MSOA2011(IData):
         MSOA_2011_map = gpd.read_file('msoa')
         
         
-        MSOA_2011_map=MSOA_2011_map.set_crs(27700,allow_override=True) #CRS was read in wrong from the file
+        MSOA_2011_map = MSOA_2011_map.set_crs(27700, allow_override=True) 
 
-        MSOA_2011_map['AREALHECT']=MSOA_2011_map.geometry.area
+        MSOA_2011_map['AREALHECT'] = MSOA_2011_map.geometry.area
         
         return MSOA_2011_map
 
 
 class DeimosAggregated(IData):
+    
+    """A class for dis-aggregation of Deimos data from MSOA level to LSOA. Counts of footfall are 
+    distributed amongst the LSOAs based on the number of workers within each LSOA"""
+    
     def __init__(self):
         self.name = 'Deimos data aggregated from deimos_ag'
         
     def create_dataframe(self):
         
         # read in deimos date seprated by age and gender
-        query_people_counts = """SELECT date_dt, purpose, msoa , SUM(people) as msoa_people
-                                FROM `ons-hotspot-prod.ingest_deimos_2021.uk_footfall_people_counts_ag`
-                                WHERE date_dt>={} AND ((msoa LIKE 'E%') OR (msoa LIKE 'W%')) 
-                                GROUP BY date_dt, purpose, msoa""".format(conf.data_start_date)  
+        query_people_counts = f"""SELECT date_dt, purpose, msoa , SUM(people) as msoa_people
+                                FROM `{cf.data_location_big_query['deimos_aggregated']}`
+                                WHERE date_dt>={cf.data_start_date} AND ((msoa LIKE 'E%') OR (msoa LIKE 'W%')) 
+                                GROUP BY date_dt, purpose, msoa""" 
         
         query_job_deimos = super().client.query(query_people_counts) 
         people_counts_df_msoa_daily = query_job_deimos.to_dataframe()
@@ -705,9 +722,9 @@ class DeimosEndTrip(IData):
         self.name='Deimos data aggregated from end trip'
         
     def create_dataframe(self):
-        
-        trip_end_query="""SELECT DISTINCT date as Date, msoa, journey_purpose, SUM(journeys_starting) AS outflow_volume , SUM(journeys_ending) as inflow_volume 
-                          FROM `ons-hotspot-prod.ingest_deimos_2021.uk_trips_trip_end_count`
+               
+        trip_end_query=f"""SELECT DISTINCT date as Date, msoa, journey_purpose, SUM(journeys_starting) AS outflow_volume , SUM(journeys_ending) as inflow_volume 
+                          FROM `{cf.data_location_big_query['deimos_end_trip']}`
                           GROUP BY date, msoa, msoa_name, journey_purpose
                           ORDER BY date, msoa"""
         
