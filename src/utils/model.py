@@ -66,42 +66,42 @@ def r2(x, y):
        '''
     return stats.pearsonr(x, y)[0] ** 2
 
-def plot_var_by_travel_cluster(df_to_plot,varbl,wk_or_dat,oprtn):
-    '''
-    Plot dynamic variables/performance
-    indicators aggregated
-    for different
-    travel clusters
-    '''
-    df_to_plot=df_to_plot[[varbl,wk_or_dat,'travel_cluster']]
+# def plot_var_by_travel_cluster(df_to_plot,varbl,wk_or_dat,oprtn):
+#     '''
+#     Plot dynamic variables/performance
+#     indicators aggregated
+#     for different
+#     travel clusters
+#     '''
+#     df_to_plot=df_to_plot[[varbl,wk_or_dat,'travel_cluster']]
    
-    df_to_plot=df_to_plot.dropna()
-    if (wk_or_dat=='week')|(wk_or_dat=='week_train'):
-        df_to_plot['week_number']=df_to_plot[wk_or_dat].str.strip('week_').astype(int)
-        if oprtn=='mean':
-            which_tc=df_to_plot.groupby(['travel_cluster','week_number'])[varbl].mean().reset_index()
-            fig = px.bar(which_tc, y=varbl, x="week_number",color='travel_cluster',barmode="group")
-            fig.show()
-            print(df_to_plot.groupby(['travel_cluster'])[varbl].mean())
-        elif oprtn=='sum':
-            which_tc=df_to_plot.groupby(['travel_cluster','week_number'])[varbl].sum().reset_index()
-            fig = px.line(which_tc, y=varbl, x="week_number",color='travel_cluster')
-            fig.show()
-            print(df_to_plot.groupby(['travel_cluster'])[varbl].sum())
+#     df_to_plot=df_to_plot.dropna()
+#     if (wk_or_dat=='week')|(wk_or_dat=='week_train'):
+#         df_to_plot['week_number']=df_to_plot[wk_or_dat].str.strip('week_').astype(int)
+#         if oprtn=='mean':
+#             which_tc=df_to_plot.groupby(['travel_cluster','week_number'])[varbl].mean().reset_index()
+#             fig = px.bar(which_tc, y=varbl, x="week_number",color='travel_cluster',barmode="group")
+#             fig.show()
+#             print(df_to_plot.groupby(['travel_cluster'])[varbl].mean())
+#         elif oprtn=='sum':
+#             which_tc=df_to_plot.groupby(['travel_cluster','week_number'])[varbl].sum().reset_index()
+#             fig = px.line(which_tc, y=varbl, x="week_number",color='travel_cluster')
+#             fig.show()
+#             print(df_to_plot.groupby(['travel_cluster'])[varbl].sum())
             
-    elif wk_or_dat=='Date':
-        if oprtn=='mean':
-            which_tc=df_to_plot.groupby(['travel_cluster',wk_or_dat])[varbl].mean().reset_index()
-            fig = px.bar(which_tc, y=varbl, x="Date",color='travel_cluster',barmode="group")
-            fig.show()
-            print(df_to_plot.groupby(['travel_cluster'])[varbl].mean())
-        elif oprtn=='sum':
-            which_tc=df_to_plot.groupby(['travel_cluster',wk_or_dat])[varbl].sum().reset_index()
-            fig = px.line(which_tc, y=varbl, x="Date",color='travel_cluster')
-            fig.show()
-            print(df_to_plot.groupby(['travel_cluster'])[varbl].sum())
-    elif (wk_or_dat !='week') |(wk_or_dat=='week_train')| (wk_or_dat!='Date'):
-        print('Provided time-frame column does not exist')
+#     elif wk_or_dat=='Date':
+#         if oprtn=='mean':
+#             which_tc=df_to_plot.groupby(['travel_cluster',wk_or_dat])[varbl].mean().reset_index()
+#             fig = px.bar(which_tc, y=varbl, x="Date",color='travel_cluster',barmode="group")
+#             fig.show()
+#             print(df_to_plot.groupby(['travel_cluster'])[varbl].mean())
+#         elif oprtn=='sum':
+#             which_tc=df_to_plot.groupby(['travel_cluster',wk_or_dat])[varbl].sum().reset_index()
+#             fig = px.line(which_tc, y=varbl, x="Date",color='travel_cluster')
+#             fig.show()
+#             print(df_to_plot.groupby(['travel_cluster'])[varbl].sum())
+#     elif (wk_or_dat !='week') |(wk_or_dat=='week_train')| (wk_or_dat!='Date'):
+#         print('Provided time-frame column does not exist')
 
 
 def get_train_test_dataframes(df_to_fit, grp_var,week_indx):
