@@ -21,6 +21,25 @@ import utils.dynamic as dyn
 
 #############################
 
+def sort_cols(df, cols):
+    '''
+    Simple function to sort a dataframe by the specified column(s) and reset the index. Returns sorted and reindexed dataframe, although assignment is not necessary as the input dataframe is not copied and operations are performed in place.
+    
+    :param df: Dataframe to sort
+    :type df: Pandas DataFrame
+    
+    :param cols: Column(s) to sort the dataframe
+    :type cols: string, or list of strings
+    
+    :return: Sorted and reindexed dataframe
+    :rtype: Pandas DataFrame
+    '''
+    
+    df.sort_values(by=cols, inplace=True)
+    df.reset_index(drop=True, inplace=True)
+    
+    return df
+
 def read_data(table_type, table_dict = cf.data_tables, join_col = 'LSOA11CD', england_only = True):
     '''
     Read in and join a list of data tables on a common column.
@@ -312,7 +331,7 @@ def apply_timelag(dynamic_df, dynamic_df_norm, save_results=True):
     return dynamic_df_lagged_merged
 
 
-def join_cases_to_static_data(static_df):
+def join_cases_to_static_data(static_df, table = 'aggregated_tests_lsoa'):
     """
     Prepare the Test & Trace data containing the number of positive cases at LSOA level. The number of cases
     is left joined to the exist static data to ensure that a record exists for every LSOA in every week.
@@ -320,12 +339,15 @@ def join_cases_to_static_data(static_df):
     :param static_df: The processed static data set
     :type static_df: Pandas DataFrame
     
+    :param table: Target cases table to feed into DataFactory
+    :type table: string
+    
     :return: A Pandas DataFrame containing static variables and cases for each LSOA each week
     :rtype: Pandas DataFrame
     """
-    
+
     # ingest cases data
-    cases_df = factory.get('aggregated_tests_lsoa').create_dataframe()
+    cases_df = factory.get(table).create_dataframe()
 
     # sort cases data by date
     cases_df_datum = cases_df[['Date','LSOA11CD','COVID_Cases']].sort_values(by='Date').reset_index(drop=True)
@@ -505,7 +527,7 @@ def derive_week_number(cases_static_df):
     cases_static_df = cases_static_df.reset_index(drop=True)
 
     # check that every LSOA is present in the data
-    assert cases_static_df.groupby('Date')['LSOA11CD'].count().unique() == cf.n_lsoa
+    # assert cases_static_df.groupby('Date')['LSOA11CD'].count().unique() == cf.n_lsoa, "Number of LSOAs in dataset is not as expected"
     
     return cases_static_df
 
@@ -545,7 +567,7 @@ def create_test_data(all_weeks_df, static_df, deimos_footfall_df, vax_processed_
     
     # the test set contains only timestamps where footfall data is available, but not cases data
     test_df = footfall_static_vax_df[footfall_static_vax_df['Date'] > date_cutoff].reset_index(drop=True)
-    
+ 
     # convert units of mobility features to align with the training data
     test_df = convert_units(df = test_df, 
                             colname = 'worker_visitor_footfall_sqkm',
@@ -567,7 +589,7 @@ def create_test_data(all_weeks_df, static_df, deimos_footfall_df, vax_processed_
     
     # drop the numeric fields that are no longer needed
     test_df.drop(['ALL_PEOPLE', 'total_vaccinated_first_dose', 'total_vaccinated_second_dose', 'Area'], axis=1, inplace=True)  
-        
+    
     # store the test data date range as a string
     test_data_range = test_df['Date'].min() + '-' + test_df['Date'].max()
     
