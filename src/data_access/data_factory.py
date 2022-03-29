@@ -68,8 +68,7 @@ class DataFactory:
                 table = conf.lagged_dynamic_non_stationary
                 query = f"SELECT * FROM `{table}`" 
                 return NoProcessing(query)
-
-            
+              
             # processed time tranches model inputs
             # these data sets are read in by the time tranches modelling functions
             if data_name == 'tranche_model_input':
@@ -116,7 +115,7 @@ class DataFactory:
             
             # data used for unit tests
             if data_name.startswith('unit_test'):
-                query = f"SELECT * FROM {'wip.' + data_name}"
+                query = f"SELECT * FROM {'review_ons.' + data_name}"
                 return NoProcessing(query)
             raise Exception('Data Class Not Found')
         except Exception as _e:

@@ -1,6 +1,6 @@
 read_data_table_dict =  {
      'static_test': ['unit_test_static_vars', 'unit_test_mid_year_lsoa', 'unit_test_mobility_clusters', 'unit_test_flow_to_work', 'unit_test_lsoa_2011']
-    ,'dynamic_test': ['aggregated_tests_lsoa', 'lsoa_vaccinations', 'Deimos_trip_end_count', 'lsoa_daily_footfall']
+    ,'dynamic_test': ['unit_test_cases', 'unit_test_deimos']
 }
 
 static_columns = ['LSOA11CD', 'LSOA11NM', 'MSOA11CD', 'MSOA11NM', 'LTLA20CD', 'LTLA20NM',
@@ -88,3 +88,15 @@ sum_dic = {'newcol':['col1', 'col2']
         ,'newcol2':['col3', 'col4', 'col5']
        }
 
+tranche_model_idbr_features = ['care_homes_warehousing', 'ready_meals_textiles', 'meat_and_fish_processing']
+
+tranche_dates = ['2020-04-26','2020-08-31','2020-11-14','2020-12-31','2021-02-14','2021-04-29','2021-07-15','2021-08-31']
+
+tranche_description = ['low_prev_no_school',
+                       'high_prev_school_opn',
+                       'high_prev_school_opn_alph',
+                       'high_prev_no_school_alph_vaccn',
+                       'low_prev_school_opn_vaccn_dbl',
+                       'high_prev_school_opn_dlta_vaccn_dbl',
+                       'lifting_lockdown',
+                       'high_prev_school_open_delta_vaccn']
