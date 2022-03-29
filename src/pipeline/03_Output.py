@@ -9,8 +9,6 @@ from data_access.data_factory import DataFactory as factory
 from utils import config as cf
 from utils import dashboard as dash
 
-##### LOAD DATA SETS #######
-
 # Coefficients from the regression with regularisation
 df_reg_coefs = factory.get('tranche_regularised_coefs').create_dataframe()
 
@@ -53,8 +51,6 @@ df_encoded = dash.encode_column(df_quint, 'travel_cluster')
 
 # pivot the data set
 df_features_pivot = dash.pivot_results(df_encoded)
-
-#### PRETTY NAMES ####
 
 # Rename column to fit into the for loop below
 df_features_pivot.rename({'feature':'Features'}, axis='columns', inplace=True)

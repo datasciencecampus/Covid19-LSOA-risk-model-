@@ -1,4 +1,3 @@
-# import packages
 import os
 import sys
 import numpy as np
@@ -38,7 +37,7 @@ static_df = static_df.fillna(0)
 
 static_df.drop(columns=cf.static_col_drop, inplace=True)
 
-# # combine the flow to work columns from factor analysis
+# combine the flow to work columns from factor analysis
 static_df = pp.sum_features(static_df)
 
 # pre-processing for the two way fixed effects model

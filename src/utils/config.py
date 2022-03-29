@@ -6,7 +6,8 @@ import numpy as np
 
 # Define the location of LSOA 2011 GeoJSON file
 geography_bucket = 'hotspot-prod-geodata'
-geography_filename = 'LSOA_2011_EW_BSC.geojson'
+lsoa_geojson_filename = 'LSOA_2011_EW_BSC.geojson'
+msoa_geojson_filename = 'msoa.geojson'
 
 # create a empty dictionary to store the file locations of input data sets
 data_location_big_query = {}
@@ -19,8 +20,8 @@ data_location_big_query['flow_to_work'] = "ons-hotspot-prod.wip.idbr_census_flow
 data_location_big_query['cases'] = "ons-hotspot-prod.ingest_track_and_trace.aggregated_positive_tests_lsoa"
 data_location_big_query['vaccination'] = "ons-hotspot-prod.ingest_vaccination.lsoa_vaccinations_new"
 data_location_big_query['mobility_DEIMOS'] = "ons-hotspot-prod.wip.people_counts_df_lsoa_daily_latest"
-data_location_big_query['deimos_end_trip'] = "ons-hotspot-prod.ingest_deimos_2021.uk_trips_trip_end_count"
 data_location_big_query['deimos_aggregated'] = "ons-hotspot-prod.ingest_deimos_2021.uk_footfall_people_counts_ag"
+data_location_big_query['lsoa_2001_to_2011_lookup'] = "ons-hotspot-prod.ingest_geography. lsoa_2001_to_2011_look_up"
 
 ######################
 ## Section B - Location to write intermediate data sets created during the modelling process
@@ -89,7 +90,7 @@ data_tables = {
      'static': ['static_vars', 'mid_year_lsoa', 'mobility_clusters_processed', 'flow_to_work', 'LSOA_2011']
     
     # two-way fixed effects model uses all of the dynamic features
-    ,'dynamic': ['aggregated_tests_lsoa', 'lsoa_vaccinations', 'Deimos_trip_end_count', 'lsoa_daily_footfall']
+    ,'dynamic': ['aggregated_tests_lsoa', 'lsoa_vaccinations', 'lsoa_daily_footfall']
 
 }
 
@@ -246,13 +247,13 @@ zero_infltd_modl = False
 
 # Lag configuration
 cols_not_to_lag = ['Date','LSOA11CD']  
-mobility_cols_to_lag = ['worker_visitor_footfall_sqkm_norm_lag_area','resident_footfall_sqkm_norm_lag_area','commute_inflow_sqkm_norm_lag_area','other_inflow_sqkm_norm_lag_area']
+mobility_cols_to_lag = ['worker_visitor_footfall_sqkm_norm_lag_area','resident_footfall_sqkm_norm_lag_area']
 vacc_cols_to_lag = [] 
 
 
 #modelling - These vars will be included in the dataset that undergoes modelling (they do not have to be included in the modelling itself if not wanted)
 dynamic_vacc = []
-dynamic_mobility = ['worker_visitor_footfall_sqkm','resident_footfall_sqkm','commute_inflow_sqkm','other_inflow_sqkm']
+dynamic_mobility = ['worker_visitor_footfall_sqkm','resident_footfall_sqkm']
 
 # GCP dataset prefix for static and dynamic risk model outputs
 # suffix will change for static/dynamic and whether zero inflation is applied
@@ -453,9 +454,7 @@ features_dict['dynamic_area_norm'] = {
                 'visitor_footfall_sqkm',
                 'resident_footfall_sqkm',
                 'total_footfall_sqkm',
-                'worker_visitor_footfall_sqkm',
-                'commute_inflow_sqkm',
-                'other_inflow_sqkm']
+                'worker_visitor_footfall_sqkm']
 }
 
 features_dict['dynamic_pop'] = {
@@ -547,7 +546,3 @@ tc_short_names = {'L1. >70% metropolitan core dwellers':'Metro Core',
                   'L3. >70% suburban dwellers':'Suburban',
                   'L4. >70% exurban dwellers':'Exurban',
                   'L5. >70% rural dwellers':'Rural'}
-
-
-
-#strt_training_period = ""

@@ -41,68 +41,41 @@ class DataFactory:
             if data_name =='static_vars_rgns':
                 return StaticVars_rgn()
             if data_name == 'LSOA_2011':
-                return do.LSOA2011() #only utilised within data_objects.py
+                return do.LSOA2011() 
             if data_name == 'mid_year_lsoa':
-                return do.LSOA_MidYear() # only utilised within data_objects.py
+                return do.LSOA_MidYear() 
             if data_name == 'aggregated_tests_lsoa':
-                return do.AggregatedTestsLSOA() #used in create_dynamic
+                return do.AggregatedTestsLSOA() 
             if data_name == 'mobility_clusters_processed':
-                return do.MobilityClustersProcessed()#used in apply_time_lag, create_static
+                return do.MobilityClustersProcessed()
             if data_name == 'lsoa_daily_footfall':
-                return do.LSOADailyFootfall()  #used in create_dynamic
+                return do.LSOADailyFootfall()  
             if data_name == 'lsoa_vaccinations':
-                return do.LSOAVaccinations() #used in create_dynamic,
-            # if data_name == 'flows_mars_data':
-            #     return do.FlowsMarsData() # not currently used
-            # if data_name == 'static_subset_for_norm': #used in create_dynamic for normalising variables
-            #     return do.StaticSubset()
-            # if data_name == 'static_normalised':    
-            #     return do.StaticNormalised()  #created in create_static, used in apply_vif_static
+                return do.LSOAVaccinations()
             if data_name == 'all_tranches_dynamic_static':
-                return do.AllTranches() #uses outputs from apply_vif_Static and apply_time_lag, used in modelling static and dynamic and used within do.DynamicChangesWeekly.
+                return do.AllTranches() 
             if data_name == 'dynamic_changes_weekly':
-                return do.DynamicChangesWeekly()#created in risk_weekly_dynamic
-            # if data_name == 'static_changes_weekly':
-            #     return do.StaticChangesWeekly() #created in risk_weekly_static
-            # if data_name == 'static_changes_weekly_ci':
-            #     return do.StaticChangesWeekly_ci()#created in risk_weekly static
+                return do.DynamicChangesWeekly()
             if data_name=='Deimos_aggregated': 
-                return do.DeimosAggregated() #used as input into LSOADailyFootfall().
-            if data_name=='Deimos_trip_end_count':
-                return do.DeimosEndTrip() #used in create_dynamic
-            # if data_name == 'lsoa_industry':
-            #     query="SELECT * FROM `ons-hotspot-prod.wip.idbr_lsoa_industry_wide`" #used in create static
-            #     return NoProcessing(query)
-            # if data_name == 'travel_clusters':
-            #     query="SELECT * FROM `ons-hotspot-prod.ingest_geography.lsoa_mobility_cluster_ew_lu`" #used in apply_time_lag
-            #     return NoProcessing(query)
+                return do.DeimosAggregated()
+            # if data_name=='Deimos_trip_end_count':
+            #     return do.DeimosEndTrip()     
             if data_name == 'flow_to_work':
                 table = conf.data_location_big_query['flow_to_work']
                 query = f"SELECT * FROM `{table}`"
-                return NoProcessing(query)
-            # if data_name == 'lsoa_dynamic':
-            #     table = conf.dynamic_data_file
-            #     query = f"SELECT * FROM `{table}`"  #created in create_dynamic, used in apply_time_lag
-            #     return NoProcessing(query)
-            # if data_name == 'static_vars_for_modelling':
-            #     query="SELECT * FROM `wip.risk_model_static_variables_main`" #created in apply_vif_static, not currently used in any notebooks
-            #     return NoProcessing(query)
+                return NoProcessing(query)         
             if data_name == 'dynamic_time_lagged':
                 table = conf.lagged_dynamic_non_stationary
-                query = f"SELECT * FROM `{table}`" #created in apply_time_lag, used in data object AllTranches()
+                query = f"SELECT * FROM `{table}`" 
                 return NoProcessing(query)
-#             if data_name == 'dynamic_raw_norm_chosen_geo':
-#                 table = conf.dynamic_data_file_normalised
-#                 query = f"SELECT * FROM `{table}`" #created in create_dynamic, used in apply_timelag
-#                 return NoProcessing(query)     
+
             
             # processed time tranches model inputs
             # these data sets are read in by the time tranches modelling functions
             if data_name == 'tranche_model_input':
                 table = conf.tranches_model_input_processed
                 query = f"SELECT * FROM {table}"
-                return NoProcessing(query)
-            
+                return NoProcessing(query)      
             if data_name == 'tranche_model_test_data':
                 table = conf.tranches_model_test_data
                 query = f"SELECT * FROM {table}"
