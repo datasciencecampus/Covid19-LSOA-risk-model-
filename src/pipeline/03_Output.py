@@ -38,7 +38,7 @@ df_residuals = df_preds_all_tranches[['LSOA11CD','tranche','Residual']]
 df_latest_pred = df_latest_pred[['LSOA11CD','Predicted_cases_test']]
 
 # Filter the features for the latest tranche for plotting
-df_features = df_features[df_features['tranche_order'] == cf.n_tranches]
+df_features = df_features[df_features['tranche_order'] == df_features['tranche_order'].max()]
 
 # Drop the column to allow for quintile calculation on all numerical columns
 df_features.drop(['Date','tranche_order','tranche_desc','COVID_Cases_per_unit_area'], axis=1, inplace=True)
