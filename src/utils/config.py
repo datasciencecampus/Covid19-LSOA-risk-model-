@@ -16,10 +16,10 @@ data_location_big_query = {}
 data_location_big_query['static'] = "ons-hotspot-prod.ingest_risk_model.risk_model_lsoa"
 data_location_big_query['lsoa_midyear_population_2019'] = "ons-hotspot-prod.ingest_risk_model.mid_year_pop19_lsoa"
 data_location_big_query['mobility_clusters_processed'] = "ons-hotspot-prod.ingest_geography.lsoa_mobility_cluster_ew_lu"
-data_location_big_query['flow_to_work'] = "ons-hotspot-prod.wip.idbr_census_flowtowork_lsoa_highindustry"
+data_location_big_query['flow_to_work'] = "ons-hotspot-prod.review_ons.idbr_census_flowtowork_lsoa_highindustry"
 data_location_big_query['cases'] = "ons-hotspot-prod.ingest_track_and_trace.aggregated_positive_tests_lsoa"
 data_location_big_query['vaccination'] = "ons-hotspot-prod.ingest_vaccination.lsoa_vaccinations_new"
-data_location_big_query['mobility_DEIMOS'] = "ons-hotspot-prod.wip.people_counts_df_lsoa_daily_latest"
+data_location_big_query['mobility_DEIMOS'] = "ons-hotspot-prod.review_ons.people_counts_df_lsoa_daily_latest"
 data_location_big_query['deimos_aggregated'] = "ons-hotspot-prod.ingest_deimos_2021.uk_footfall_people_counts_ag"
 data_location_big_query['lsoa_2001_to_2011_lookup'] = "ons-hotspot-prod.ingest_geography. lsoa_2001_to_2011_look_up"
 
@@ -72,7 +72,7 @@ dashboard_tranche_latest_preds = 'review_ons.dashboard_tranche_latest_preds'
 # select the model type to run
 # valid options are 'time_tranche' or 'two_way_fixed_effects'
 # any other value will throw an error
-model_type = "two_way_fixed_effects"
+model_type = "time_tranche"
 
 # start date from which the number of positive tests and vaccinations should be loaded
 data_start_date = "'2020-04-01'"
