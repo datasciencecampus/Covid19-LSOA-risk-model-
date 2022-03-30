@@ -1,4 +1,5 @@
 import pandas as pd
+from utils import config as cf
 
 def normalise(df, columns, by=None, suffix=''):
     """
@@ -76,3 +77,33 @@ def create_time_slice(df, t1, t2):
     '''
     
     return df[(df['Date'] > t1) & (df['Date'] <= t2)]
+
+
+def get_ethnicities_list(df, subgroups):
+    """
+    This function returns a list of ethnicities. If subgroups = False then the list of umbrella ethnicities from
+    the config file is return. If subgroups = True then the function returns a list of column names from a dataframe
+    passed to the 'df' argument. The column names must be from the 2011 census and most not be in the umbrella ethnicities 
+    list defined in the config file.
+    
+    The purpose of identifying the ethnicity subgroup columns is so that they can be dropped from the dataframe
+    later in the preprocessing script
+    
+    :param df: A dataframe for which we want to check for the presence of census ethnicity features
+    :type df: Pandas DataFrame
+    
+    :param subgroups: Boolean for whether to check the column names of the dataframe, or simply extract
+    a list of ethnicity feature names from the config file
+    :type subgroups: bool
+    
+    :return: A list of ethnicity feature names
+    :rtype: [str]
+    """
+    
+    ethnicities = cf.features_dict['umbrella_ethnicity']['columns']
+    
+    if subgroups:
+        
+        ethnicities = [column for column in df.columns.to_list() if 'CENSUS_2011' in column if column not in ethnicities] 
+
+    return ethnicities
