@@ -85,7 +85,7 @@ class DataFactory:
                 return NoProcessing(query)
             
             # non-normalised dynamic features
-            if data_name == 'dynamic_lsoa':
+            if data_name == 'lsoa_dynamic':
                 table = conf.dynamic_data_file
                 query = f"SELECT * FROM `{table}`" 
                 return NoProcessing(query)
