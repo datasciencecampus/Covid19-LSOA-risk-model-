@@ -26,7 +26,7 @@ def static_model(alphas_val = cf.alphas_val,
     """
     First step of the two way fixed effects model uses static variables only to predict cases. Function writes output to GCP tables at the end, and outputs dataframes to be picked up by the dynamic_model function.
     
-    The data is grouped by the travel_cluster column (to minimise spatial correlation in the data) and a model is created for each time period, as specified in the train_weeks parameter. This defaults to 1, so a model will be trained for each week, using the previous week as training data. Then in the dynamic_model funcion, the target variable is the week-on-week change in residuals from the static model, and the explanatory variables are the week-on-week changes in the dynamic features.
+    The data is grouped by the travel_cluster column (to minimise spatial correlation in the data) and a model is created for each time period, as specified in the train_weeks parameter. This defaults to 1, so a model will be trained for each week, using the previous week as training data. Then in the dynamic_model function, the target variable is the week-on-week change in residuals from the static model, and the explanatory variables are the week-on-week changes in the dynamic features.
     
     :param alphas_val: List of alphas for cross-validation. Default is np.logspace(-3, 3, 101), set in config file.
     :type alphas_val: Numpy array
@@ -247,7 +247,7 @@ def tranches_model(use_regularisation = cf.use_regularisation,
                    save_results = True):
     
     """
-    Loads training and test data from BigQuery, runs a regression model for each time tranche of
+    Loads training and test data from BigQuery and runs a linear regression model for each time tranche of
     each travel cluster. Results are output in the form of five dataframes:
     
     1) Coefficient estimates for linear regression with regularisation

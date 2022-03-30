@@ -3,26 +3,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 from scipy.signal import argrelextrema
-
-import time
-from functools import reduce
 import matplotlib.pyplot as plt
-
-import string
-import math
-
-import pgeocode
-
-
-from statsmodels.tools.eval_measures import rmse, aic
-from statsmodels.tsa.stattools import grangercausalitytests
-
-from statsmodels.tsa.seasonal import seasonal_decompose
-from statsmodels.tsa.stattools import adfuller
-from statsmodels.graphics.tsaplots import plot_acf
-from statsmodels.graphics.tsaplots import plot_pacf
-from statsmodels.tsa.stattools import kpss
-
 from statsmodels.tsa.stattools import adfuller
 
 def plot_var_by_travel_cluster(df_to_plot,varbl):
@@ -30,10 +11,9 @@ def plot_var_by_travel_cluster(df_to_plot,varbl):
     Plot weekly aggregated dynamic variables
     for different travel clusters
     '''
-    which_tc=df_to_plot.groupby(['travel_cluster','Date'])[varbl].sum().reset_index()
+    which_tc = df_to_plot.groupby(['travel_cluster','Date'])[varbl].sum().reset_index()
     fig = px.line(which_tc, y=varbl, color='travel_cluster',x="Date")
     fig.show()
-
     
 
 def end_of_week(datm, days=6):
@@ -56,9 +36,9 @@ def check_for_stationarity(df_to_chck,col_name,travel_cluster_df=None):
     '''
     
     if 'travel_cluster' not in list(df_to_chck.columns):
-        df_to_chck=df_to_chck.merge(travel_cluster_df,on='LSOA11CD',how='inner')
+        df_to_chck = df_to_chck.merge(travel_cluster_df, on='LSOA11CD', how='inner')
         
-    df_to_chck=df_to_chck.groupby(['Date','travel_cluster'])[col_name].mean().reset_index()
+    df_to_chck = df_to_chck.groupby(['Date','travel_cluster'])[col_name].mean().reset_index()
     
     df_to_chck= [pd.DataFrame(y) for x, y in df_to_chck.groupby('travel_cluster', as_index=False)]
     
@@ -70,12 +50,15 @@ def check_for_stationarity(df_to_chck,col_name,travel_cluster_df=None):
         adfuller_test(df_tc[name],signif=0.05, name=name)
         print('AFTER DIFFERENCING')
         print('+++'*100)
-        # We are not removing seasonality from Cases 
+        
+        # do not remove seasonality from cases 
         if col_name=='COVID_Cases':
             df_tc_diff=df_tc[['Date',name]].set_index('Date').dropna()
         else:
             df_tc_diff=df_tc[['Date',name]].set_index('Date').diff().dropna()
+        
         adfuller_test(df_tc_diff[name],signif=0.05, name=name)
+        
 
 def adfuller_test(series, signif=0.05, name='', verbose=False):
     """
@@ -124,68 +107,85 @@ def df_derived_by_shift(df,lag=0,NON_DER=[],trgt_col=[]):
     return df
 
 class TimeLag():
+    
     def __init__(self):
         self.name="Class  which holds functions to calculate time lag"
+        
     def compute_time_lagged_corr(self,df_list_rgns,col_a,col_b,col_c,which_one_rgn,window_days,start_date=2020-30-12,n_lag=12,plt_Flg=True,moblty_flg=False):
     
         '''
         Computes time-lagged cross correlation
         between two columns of the df:col_a,col_b
 
-        df_list_rgns: input df list based on the spatial split
-        lsoa/msoa/regions/travel_cluster/country
+        :param df_list_rgns: input df list based on the spatial split lsoa/msoa/regions/travel_cluster/country
+        :type: df_list_rgns: [str]
 
-        col_a: the target column: could be cases/mortality data
+        :param col_a: the target column: could be cases/mortality data
+        :type col_a: str
 
-        col_b/col_c: feature for which optimal time lag
-        with col_a needs to be computed. This could be 
-        vacciantion data/ Mobility indicator.
+        :param col_b: feature for which optimal time lag with col_a needs to be computed
+        :type: col_b: str
+        
+        :param col_c: feature for which optimal time lag with col_a needs to be computed
+        :type col_c: str
 
-        which_one_rgn: group variable in the multi-group modelling,
-        could be travel_cluster/UTLA/LTLA/MSOA/LSOA
+        :param which_one_rgn: group variable in the multi-group modelling, could be travel_cluster/UTLA/LTLA/MSOA/LSOA
+        :type which_one_rgn: str
 
-        window_days: number of days from the start of the year
+        :param window_days: number of days from the start of the year
         after which one starts comparing the two time series.
         Note, if window_days<0, then one starts the 
         comparison before the start of the year (might only make sense
-        for mobility as vaccination only kicked in from December onwards
+        for mobility as vaccination only kicked in from December 2020 onwards
         and each of this indicator (Mob/vacc) is expected to influence
         target variable after a certain lag)
+        :type window_days: int
 
-        n_lag: for how many historical weeks one wants to evaluate 
+        :param n_lag: for how many historical weeks one wants to evaluate 
         time-lagged cross correlation.
+        :type n_lag: int
 
-        start_date=Date to use for cut off in format (YYYY-MM-DD)
+        :param start_date: date to use for cut off in format (YYYY-MM-DD)
+        :type start_date: str
+        
+        :param plt_Flg: flag for plotting the feature 
+        :type plt_Flg: bool
+        
+        :param moblty_flg: flag to say whether the feature of interest is mobility. If True, find a local maximum 
+        in the cross-correlation because we expect mobility to be positively correlated with cases. 
+        If False, we are evaluating a vaccination feature and we look for a local
+        minima because vaccinations are expected to be negatively correlated with cases.
+        :type moblty_flg: bool
         '''
-        str_rgn=[]
-        str_ftr=[]
-        str_corr=[]
-        str_optimal_lag=[]
+        str_rgn = []
+        str_ftr = []
+        str_corr = []
+        str_optimal_lag = []
 
 
         # Vaccination influence: start comparing the
         # two time series mid-January onwards
         # Mobility influence:window_days can be negative 
         # starting the signal before January 2021
-        cut_off_datum_1=pd.to_datetime(f'{start_date}')+timedelta(window_days)
+        cut_off_datum_1 = pd.to_datetime(f'{start_date}')+timedelta(window_days)
 
         print(cut_off_datum_1)
 
         for which_indx in range(len(df_list_rgns)):
 
 
-            df=df_list_rgns[which_indx]
+            df = df_list_rgns[which_indx]
 
-            trvl_clustr_nam=df[which_one_rgn].unique()[0]
+            trvl_clustr_nam = df[which_one_rgn].unique()[0]
 
-            df=df.groupby(['Date',which_one_rgn])[[col_a,col_b,col_c]].sum().reset_index()
+            df = df.groupby(['Date',which_one_rgn])[[col_a,col_b,col_c]].sum().reset_index()
 
-            df=df.set_index('Date')
+            df = df.set_index('Date')
 
-            df=df.dropna()
+            df = df.dropna()
             print(trvl_clustr_nam)
 
-            df=df[[x for x in df.columns if x not in [which_one_rgn]]]
+            df = df[[x for x in df.columns if x not in [which_one_rgn]]]
 
 
 
@@ -197,10 +197,9 @@ class TimeLag():
                 print('\n')
 
             # different indicators might be stationary after different transformations
-            # we start with first order difference
-            #TA: deduplicated code here
-            whch_col  =col_c if moblty_flg else col_b
-            df=df[[col_a,whch_col]].diff().dropna()
+            # start with first order difference
+            whch_col = col_c if moblty_flg else col_b
+            df = df[[col_a,whch_col]].diff().dropna()
 
             print('==================after differencing ====================')
             # ADF Test on each column
@@ -209,11 +208,10 @@ class TimeLag():
                 adfuller_test(column, name=column.name)
                 print('\n')
 
-            df[which_one_rgn]=trvl_clustr_nam
+            df[which_one_rgn] = trvl_clustr_nam
 
-            #TA: simplified code
             if not moblty_flg:
-                df=df[df.index>pd.to_datetime(cut_off_datum_1)]
+                df = df[df.index > pd.to_datetime(cut_off_datum_1)]
 
 
             df.sort_index(ascending=True, inplace=True)
@@ -226,7 +224,7 @@ class TimeLag():
                 ax.set_ylabel(col_a,color="blue",fontsize=14)
                 ax.set_title(trvl_clustr_nam)
 
-                ax2=ax.twinx()
+                ax2 = ax.twinx()
                 ax2.plot(df[whch_col],color="green",marker="d",alpha=0.5)
                 ax2.set_ylabel(whch_col,color="green",fontsize=14)
                 plt.show()
@@ -258,14 +256,14 @@ class TimeLag():
                 plt.show()
 
 
-            chsen_vectr=df_new.corr()[df_new.corr().index.isin([whch_col]+[whch_col+'_'+str(x+1) for x in range(n_lag)])][col_a]
+            chsen_vectr = df_new.corr()[df_new.corr().index.isin([whch_col]+[whch_col+'_'+str(x+1) for x in range(n_lag)])][col_a]
 
-            #TA: deduplicate:
             find_extrema = np.greater if moblty_flg else np.less
 
-            radius=1 #local maximum: one data point on either side for vaccination
-            vect=argrelextrema(chsen_vectr.values, find_extrema,order=radius)[0]
-            vect_values=chsen_vectr.values[vect]
+            #find a local maximum
+            radius = 1 
+            vect = argrelextrema(chsen_vectr.values, find_extrema,order=radius)[0]
+            vect_values = chsen_vectr.values[vect]
             print(vect)
             print(vect_values)
             print(vect[0])
@@ -277,14 +275,16 @@ class TimeLag():
             str_ftr.append(col_b)
             print(which_indx)
 
-        nam_col='week'
+        nam_col = 'week'
         if moblty_flg:
-            use_nam='inflow'
+            use_nam = 'inflow'
         else:
-            use_nam='vaccination'
-        df_optimal_corr=pd.DataFrame(np.column_stack([str_rgn,str_corr,str_optimal_lag]),\
+            use_nam = 'vaccination'
+        df_optimal_corr = pd.DataFrame(np.column_stack([str_rgn,str_corr,str_optimal_lag]),\
                                      columns=[which_one_rgn,'Optimal_corr_'+use_nam,'Optimal_lag_'+nam_col+'_'+use_nam])
         return df_optimal_corr
+    
+    
     def get_time_lag_value(self,dfs, trgt, vacc, mobility, region,window_days,start_date, n_lag, plt_flg, moblty_flag):
         """
         This class will return the int value of timelags across all selected regions provided by the compute time lag function
@@ -314,22 +314,31 @@ class TimeLag():
         moblty_flag: bool, True if lag for mobility is being calculated, False if vaccination lag is to be calculated
         """
         
-
-        optimal_corr_df=self.compute_time_lagged_corr(dfs,trgt,vacc,mobility,region,window_days,start_date,n_lag,plt_flg,
-                                                      moblty_flag)  #calculate time lag
+        #calculate the time lag
+        optimal_corr_df = self.compute_time_lagged_corr(dfs,trgt,vacc,mobility,region,window_days,start_date,n_lag,plt_flg,
+                                                      moblty_flag) 
 
         if moblty_flag:
-            optimal_corr_df=optimal_corr_df.rename(columns={'Optimal_lag_week_inflow':f'Optimal_lag_week_{mobility}',
-                                                                                       'Optimal_corr_inflow':f'Optimal_corr_{mobility}'})      #rename to mobility column
-            lag_value=np.rint(optimal_corr_df[f'Optimal_lag_week_{mobility}'].astype(float).mean()).astype(int)  #get lag value
-            print (f"Lag for {mobility} calculated: {lag_value} weeks")        
+            
+            #rename to reflect the lag having been applied to mobility column
+            optimal_corr_df = optimal_corr_df.rename(columns={'Optimal_lag_week_inflow':f'Optimal_lag_week_{mobility}',
+                                                                                       'Optimal_corr_inflow':f'Optimal_corr_{mobility}'})
+            
+            #get the int value for the lag (number of weeks)
+            lag_value=np.rint(optimal_corr_df[f'Optimal_lag_week_{mobility}'].astype(float).mean()).astype(int)
+            print(f"Lag for {mobility} calculated: {lag_value} weeks")        
+            
         else:
+            #rename to reflect the lag having been applied to vaccination column
             optimal_corr_df=optimal_corr_df.rename(columns={'Optimal_lag_week_vaccination':f'Optimal_lag_week_{vacc}',
-                                                                                       'Optimal_corr_vaccination':f'Optimal_corr_{vacc}'}) #rename to the vaccinatin column
-            lag_value=np.rint(optimal_corr_df[f'Optimal_lag_week_{vacc}'].astype(float).mean()).astype(int)
-            print (f"Lag for {vacc} calculated: {lag_value} weeks")
+                                                                                       'Optimal_corr_vaccination':f'Optimal_corr_{vacc}'}) 
+            
+            #get the int value for the lag (number of weeks)
+            lag_value = np.rint(optimal_corr_df[f'Optimal_lag_week_{vacc}'].astype(float).mean()).astype(int)
+            print(f"Lag for {vacc} calculated: {lag_value} weeks")
 
         return lag_value
+    
 
     def split_df_apply_time_lag(self,df_to_split,cols_to_retain, lag_value=None, apply_lag=True)->list:
         """
@@ -341,16 +350,19 @@ class TimeLag():
         apply_lag: bool, choose if lag value is to be applied. If false, only a split dataframe will be be returned
         """
         
-        split_df= [pd.DataFrame(y)[['LSOA11CD','Date']+cols_to_retain].\
+        #split dataframe by LSOA and retain specified columns
+        split_df = [pd.DataFrame(y)[['LSOA11CD','Date'] + cols_to_retain].\
                                   sort_values(by='Date').set_index('Date')\
                                   for x, y in df_to_split.\
-                                  groupby('LSOA11CD', as_index=False)]  #split dataframe by LSOA and retain specified columns
-        
+                                  groupby('LSOA11CD', as_index=False)]  
         
         if apply_lag:
-            lagged_df=[x.shift(periods=lag_value).dropna() for x in split_df]  #apply time lag by lag value
+            
+            # apply the lag 
+            lagged_df=[x.shift(periods=lag_value).dropna() for x in split_df]
         else:
-            lagged_df=split_df #do nothing
+            # no action
+            lagged_df = split_df
         
         return lagged_df
 

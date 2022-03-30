@@ -1,10 +1,4 @@
-# A collection of functions that wrangle and clean the model output into a format that can be presented in Google Data Studio
-
 import pandas as pd
-
-## THINGS TO TEST
-## IS THE NEW COLUMN CREATED?
-## DOES IT CONTAIN MAX VALUE = 5 AND MIN VALUE = 1
 
 def make_quintiles(df):
     """
@@ -25,10 +19,6 @@ def make_quintiles(df):
             df_quint[col + '_quint'] = pd.qcut(df[col], 5, labels=False).astype('int') + 1
             
     return df_quint
-
-## THINGS TO TEST
-## IS THE NEW COLUMN CREATED
-## DOES IT CONTAIN INTS
 
 def encode_column(df, colname):
     """
@@ -51,9 +41,6 @@ def encode_column(df, colname):
     df_encode[colname + '_encode'] = df_encode[colname].cat.codes
     
     return df_encode
-
-## THINGS TO TEST
-## DATAFRAME DIMENSIONS
 
 def pivot_results(df):
     """
@@ -106,14 +93,3 @@ def pretty_rename(df, colname, lookup):
     
     return df
 
-
-
-
-
-
-    
-    
-    
-    
-    
-    
