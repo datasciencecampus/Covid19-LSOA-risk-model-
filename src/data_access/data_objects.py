@@ -223,38 +223,54 @@ class LSOADailyFootfall(IData):
     def __init__(self):
         self.name = "data"
     def create_dataframe(self):
-        df=DeimosAggregated().create_dataframe()
+        
+        df = DeimosAggregated().create_dataframe()
 
-#         query = "SELECT date_dt as Date, lsoa11cd as LSOA11CD, lsoa_people, lsoa_people_perHactares, purpose, FROM `{}`".format(conf.data_location_big_query['mobility_DEIMOS']) #The input to this query is the table produced by the data object DeimosAggregated().
-
-#         query_job = super().client.query(
-#             query
-#         )  
-#         df = query_job.to_dataframe()
-        df=df.rename(columns={'date_dt':'Date', 
-                              'lsoa11cd':'LSOA11CD',
-                             'lsoa_people_perhactares':'lsoa_people_perHactares'})
+        df = df.rename(columns={'date_dt':'Date', 
+                                'lsoa11cd':'LSOA11CD',
+                                'lsoa_people_perhactares':'lsoa_people_perHactares'})
     
         df['Date'] = pd.to_datetime(df['Date'])
-        df['Date']=df['Date'].apply(lambda x: dyn.end_of_week(x)) #TOC: Changed to the swifter mehod as offset shifts days in to different weeks
-        #df['Date'] = df['Date'] + pd.offsets.Week(weekday=6) TOC: Changed to the swifter mehod as offset shifts days in to different weeks
-        df['worker_footfall_sqkm']=0
-        df['visitor_footfall_sqkm']=0
-        df['resident_footfall_sqkm']=0
-        df.loc[df['purpose']=='Worker', 'worker_footfall_sqkm']=df[df['purpose']=='Worker'].lsoa_people_perHactares.div(0.01)
-        df.loc[df['purpose']=='Visitor', 'visitor_footfall_sqkm']=df[df['purpose']=='Visitor'].lsoa_people_perHactares.div(0.01)
-        df.loc[df['purpose']=='Resident', 'resident_footfall_sqkm']=df[df['purpose']=='Resident'].lsoa_people_perHactares.div(0.01)
-        df=df.groupby(["Date","LSOA11CD"]).sum().reset_index().drop(columns=["lsoa_people","lsoa_people_perHactares"])
-        df['total_footfall_sqkm']=df["worker_footfall_sqkm"]+df["visitor_footfall_sqkm"]+df["resident_footfall_sqkm"]
-        df['worker_visitor_footfall_sqkm']=df["worker_footfall_sqkm"]+df["visitor_footfall_sqkm"]
+        
+        # transform each date to the date of the Sunday for each given week
+        df['Date'] = df['Date'].apply(lambda x: dyn.end_of_week(x))
+        
+        # define new columns
+        df['worker_footfall_sqkm'] = 0
+        df['visitor_footfall_sqkm'] = 0
+        df['resident_footfall_sqkm'] = 0
+        
+        # change units from per hectare to per square kilometre
+        df.loc[df['purpose'] == 'Worker', 'worker_footfall_sqkm'] = df[df['purpose'] == 'Worker'].lsoa_people_perHactares.div(0.01)
+        df.loc[df['purpose'] == 'Visitor', 'visitor_footfall_sqkm'] = df[df['purpose'] == 'Visitor'].lsoa_people_perHactares.div(0.01)
+        df.loc[df['purpose'] == 'Resident', 'resident_footfall_sqkm'] = df[df['purpose'] == 'Resident'].lsoa_people_perHactares.div(0.01)
+        
+        # group by the transformed date to return total weekly footfall per square kilometre for each purpose
+        df = df.groupby(["Date","LSOA11CD"]).sum().reset_index().drop(columns=["lsoa_people", "lsoa_people_perHactares"])
+        
+        # create new features with combinations of the purposes
+        df['total_footfall_sqkm'] = df["worker_footfall_sqkm"] + df["visitor_footfall_sqkm"] + df["resident_footfall_sqkm"]
+        df['worker_visitor_footfall_sqkm'] = df["worker_footfall_sqkm"] + df["visitor_footfall_sqkm"]
         df['Date'] = pd.to_datetime(df['Date'])
+        
         return df
 
 class LSOAVaccinations(IData):
     def __init__(self):
         self.name = "data"
     def create_dataframe(self):
-        query = "SELECT * FROM `{}`".format(conf.data_location_big_query['vaccination']) #TOC: Added in user defined table from config #ons-hotspot-prod.ingest_vaccination.lsoa_vaccinations_8_july_2021
+        
+        # define query
+        query = """SELECT LSOA_OF_RESIDENCE,
+                          vcc_date,
+                          GENDER,
+                          dose_first, 
+                          dose_second, 
+                          booster 
+                    
+                    FROM {} 
+                    WHERE vcc_date >= {}""".format(conf.data_location_big_query['vaccination'], 
+                                                   conf.data_start_date)
         
         query_job = super().client.query(
             query
@@ -262,76 +278,86 @@ class LSOAVaccinations(IData):
 
         vaccination_df = query_job.to_dataframe()
         
-        #vaccination data renaming columns
-        vaccination_df.drop(columns='int64_field_0',inplace=True)  
-        vaccination_df.rename(columns={'LSOA_OF_RESIDENCE':'LSOA11CD'},inplace=True)
-        #seperate male and female
-        df_vaccination_male=vaccination_df[vaccination_df['GENDER']=='Male']      
-        df_vaccination_female=vaccination_df[vaccination_df['GENDER']=='Female']
+        # import 2001 to 2011 LSOA codes lookup
+        lsoa_query = "SELECT LSOA01CD, LSOA11CD FROM `ons-hotspot-prod.ingest_geography. lsoa_2001_to_2011_look_up`"
+        
+        lu_query_job = super().client.query(lsoa_query)
+        
+        lsoa_lu = lu_query_job.to_dataframe()
 
-        #add suffixes and bring them back together
-        keep_same = {'LSOA11CD', 'vcc_date','GENDER'}     
-        df_vaccination_male.columns = ['{}{}'.format(c, '' if c in keep_same else '_vaccine_male')
-                  for c in df_vaccination_male.columns]
+        # join on old LSOA codes to see which LSOA are using the 2001 LSOA code
+        vaccination_df = vaccination_df.merge(lsoa_lu, left_on='LSOA_OF_RESIDENCE', right_on='LSOA01CD', how='outer') 
 
-        df_vaccination_female.columns = ['{}{}'.format(c, '' if c in keep_same else '_vaccine_female')
-                  for c in df_vaccination_female.columns]
+        # fill missing values with 2011 codes
+        vaccination_df['LSOA11CD'] = vaccination_df['LSOA11CD'].fillna(vaccination_df['LSOA_OF_RESIDENCE'])  
+    
+        # drop rows where LSOA code is missing
+        vaccination_df = vaccination_df[~vaccination_df['LSOA_OF_RESIDENCE'].isna()]
 
-        vaccination_df=df_vaccination_male.merge(df_vaccination_female, how='outer',
-                                                 on=['LSOA11CD','vcc_date']).drop(columns=['GENDER_x','GENDER_y'])
+        # filter for LSOAs in England
+        vaccination_df = vaccination_df[vaccination_df['LSOA11CD'].str.startswith('E')]
 
-        vaccination_df.fillna(0.0, inplace=True)
+        # check that all LSOAs are present in the data
+        assert vaccination_df['LSOA11CD'].nunique() == conf.n_lsoa, "Invalid LSOAs,the number of unique LSOAs does not equal the value for n_lsoa in the config file"
 
-        vaccination_df=vaccination_df[vaccination_df['LSOA11CD'].str.startswith('E')].reset_index(drop=True)
-
+        # drop features that are not needed
+        vaccination_df = vaccination_df.drop(columns=['LSOA_OF_RESIDENCE','LSOA01CD'])
+        
+        # drop records where GENDER == 'Unknown' and drop the GENDER column
+        vaccination_df = vaccination_df[vaccination_df['GENDER'] != 'Unknown']
+        vaccination_df.drop('GENDER', axis=1, inplace=True)
 
         # aggregate vaccinations records at LSOA level
         vaccination_df.rename(columns={'vcc_date':'Date'},inplace=True)
 
-        cols_to_aggregate=['dose_first_vaccine_male', 'dose_first_vaccine_female','dose_second_vaccine_male','dose_second_vaccine_female'] 
-
-        vaccination_df = vaccination_df.groupby(['Date','LSOA11CD'])[cols_to_aggregate].sum().reset_index()
-
-        #AA-REMOVED A DUPLICATE OF LINE ABOVE
-
-        vaccination_df['Date']=pd.to_datetime(vaccination_df['Date'])
-        vaccination_df=vaccination_df[vaccination_df['Date']>=pd.to_datetime(conf.data_start_date)].reset_index(drop=True) 
+        cols_to_aggregate = ['dose_first',
+                             'dose_second',
+                             'booster'] 
         
-        vaccination_df['total_vaccinated_first_dose']=vaccination_df['dose_first_vaccine_male'] +vaccination_df['dose_first_vaccine_female']
-        vaccination_df['total_vaccinated_second_dose']=vaccination_df['dose_second_vaccine_male'] +vaccination_df['dose_second_vaccine_female']
-        # Proportion of vaccinationed populaition (cumsum)
-        vaccination_df_cumsum=vaccination_df.copy()
-        vaccination_df_cumsum=vaccination_df_cumsum.sort_values(by=['LSOA11CD','Date'])  #sort by lsoa and week
-        vaccination_df_cumsum=vaccination_df_cumsum.groupby(["LSOA11CD",'Date']).sum().groupby(level=0).cumsum().reset_index()
-        vaccination_df_cumsum=vaccination_df_cumsum.rename(columns={'total_vaccinated_second_dose':'full_vacc_cumsum'})[['LSOA11CD','Date','full_vacc_cumsum']]
+        # group by LSOA 2011 code to remove any reference to 2001 LSOA codes
+        vaccination_df = vaccination_df.groupby(['Date','LSOA11CD'])[cols_to_aggregate].sum().reset_index()
+        
+        # proportion of vaccinationed populaition (cumulative sum)
+        vaccination_df_cumsum = vaccination_df.copy()
+        vaccination_df_cumsum = vaccination_df_cumsum.sort_values(by=['LSOA11CD', 'Date'])
+        vaccination_df_cumsum = vaccination_df_cumsum.groupby(['LSOA11CD', 'Date']).sum().groupby(level=0).cumsum().reset_index()
+        vaccination_df_cumsum = vaccination_df_cumsum.rename(columns={'dose_second':'dbl_vacc_cumsum',
+                                                                      'booster':'trpl_vacc_cumsum'})[['LSOA11CD', 'Date', 'dbl_vacc_cumsum', 'trpl_vacc_cumsum']]
+        # merge vaccinated counts and cumulative sums
+        vaccination_df = vaccination_df.merge(vaccination_df_cumsum, on=['LSOA11CD', 'Date'], how='left')
+        
+        # make the column names more informative
+        vaccination_df.rename(columns={'dose_first':'total_vaccinated_first_dose', 
+                                       'dose_second':'total_vaccinated_second_dose',
+                                       'booster':'total_vaccinated_booster'}, inplace=True)
+        
+        # define columns to keep
+        few_cols_vacct = ['Date', 
+                         'LSOA11CD', 
+                         'total_vaccinated_first_dose',
+                         'total_vaccinated_second_dose',
+                         'total_vaccinated_booster',
+                         'dbl_vacc_cumsum',
+                         'trpl_vacc_cumsum']
+        
+        # subset for the columns listed
+        vaccination_df = vaccination_df[few_cols_vacct]
+        
+        # convert to datetime
+        vaccination_df['Date'] = pd.to_datetime(vaccination_df['Date'])
 
-        #   PROPORTION OF THE VACCINATED POPULATION DURING THAT DATE
+        # transform the date to the Sunday of the same week
+        vaccination_df['Date'] = vaccination_df['Date'].apply(lambda x: dyn.end_of_week(x))
 
+        # aggregate to weekly 
+        vaccination_df = vaccination_df.groupby(['Date', 'LSOA11CD']).agg(({'total_vaccinated_first_dose':'sum',
+                                                                                 'total_vaccinated_second_dose':'sum',
+                                                                                 'total_vaccinated_booster':'sum',
+                                                                                 'dbl_vacc_cumsum':'max',
+                                                                                 'trpl_vacc_cumsum':'max'})).reset_index()
+        
+        vaccination_df['Date'] = pd.to_datetime(vaccination_df['Date'])
 
-        #  VACCINATED PER UNIT AREA (SQ KM)
-        # vaccination_df.loc[:,['total_vaccinated_first_dose']]=\
-        # vaccination_df[['total_vaccinated_first_dose']].div(vaccination_df['Area'],axis=0)  
-
-        # MERGE CUMSUM WITH VACC and divide by people
-        vaccination_df=vaccination_df.merge(vaccination_df_cumsum, on=['LSOA11CD','Date'],how='left')
-
-        few_cols_vacct=['Date', 'LSOA11CD', 'total_vaccinated_first_dose','full_vacc_cumsum','total_vaccinated_second_dose']
-
-        vaccination_df=vaccination_df[few_cols_vacct]
-
-        #  DAILY SAMPLING
-        vaccination_df=vaccination_df.groupby(['Date','LSOA11CD'])['total_vaccinated_first_dose','full_vacc_cumsum','total_vaccinated_second_dose'].\
-        sum().reset_index()
-
-        #  WEEKLY SAMPLING
-        vaccination_df['Date']=vaccination_df['Date'].apply(lambda x: dyn.end_of_week(x))
-
-        vaccination_df=vaccination_df.groupby(['Date','LSOA11CD']).agg(({'total_vaccinated_first_dose':'sum',
-                                                                         'total_vaccinated_second_dose':'sum',
-                                                                         'full_vacc_cumsum':'max'})).reset_index()
-        vaccination_df['Date']=pd.to_datetime(vaccination_df['Date'])
-
-        del vaccination_df_cumsum
         return vaccination_df
 
 class StaticSubset(IData):
@@ -595,81 +621,68 @@ class MSOA2011(IData):
 
 class DeimosAggregated(IData):
     def __init__(self):
-        self.name='Deimos data aggregated from deimos_ag'
+        self.name = 'Deimos data aggregated from deimos_ag'
         
     def create_dataframe(self):
         
-        query_people_counts="""SELECT date_dt, purpose, msoa , SUM(people) as msoa_people
+        # read in deimos date seprated by age and gender
+        query_people_counts = """SELECT date_dt, purpose, msoa , SUM(people) as msoa_people
                                 FROM `ons-hotspot-prod.ingest_deimos_2021.uk_footfall_people_counts_ag`
                                 WHERE date_dt>={} AND ((msoa LIKE 'E%') OR (msoa LIKE 'W%')) 
-                                GROUP BY date_dt, purpose, msoa""".format(conf.data_start_date)  #read in deimos date seprated by age and gender
+                                GROUP BY date_dt, purpose, msoa""".format(conf.data_start_date)  
+        
         query_job_deimos = super().client.query(query_people_counts) 
         people_counts_df_msoa_daily = query_job_deimos.to_dataframe()
 
-#         people_counts_df_msoa_daily = pd.DataFrame()
-#         daily_df = hourly_df.groupby(['date_dt','msoa', 'age','gender','purpose'], \
-#                             as_index=False).agg({'people':'sum'})
-#         if (people_counts_df_msoa_daily.empty):
-#             people_counts_df_msoa_daily = daily_df
-#         else:
-#             people_counts_df_msoa_daily = people_counts_df_msoa_daily.append(daily_df) 
-
-#         del hourly_df
-
-
-#         #combine age and gender
-#         people_counts_df_msoa_daily = people_counts_df_msoa_daily.groupby(['date_dt', 'msoa', 'purpose'],\
-#                                         as_index=False).agg(msoa_people=('people','sum'))
-
-#         #only include England and Wales
-#         people_counts_df_msoa_daily = people_counts_df_msoa_daily.loc[people_counts_df_msoa_daily['msoa'].str.startswith('E') \
-#                                     |people_counts_df_msoa_daily['msoa'].str.startswith('W') ]
-
-        msoa=MSOA2011().create_dataframe() #get msoa area data
+        #get msoa area data
+        msoa = MSOA2011().create_dataframe() 
         
         people_counts_df_msoa_daily = pd.merge(people_counts_df_msoa_daily,\
                                        msoa, left_on='msoa',\
                                        right_on='MSOA11CD', how='left')
         
-        people_counts_df_msoa_daily['msoa_people_perHactares']= people_counts_df_msoa_daily['msoa_people']/people_counts_df_msoa_daily['AREALHECT']
+        people_counts_df_msoa_daily['msoa_people_perHactares'] = people_counts_df_msoa_daily['msoa_people']/people_counts_df_msoa_daily['AREALHECT']
        
-    
+        # final msoa counts
         people_counts_df_msoa_daily = people_counts_df_msoa_daily[['date_dt', 'msoa', 'purpose', \
-                                                           'msoa_people', 'AREALHECT', 'msoa_people_perHactares']] #final msoa counts
+                                                           'msoa_people', 'AREALHECT', 'msoa_people_perHactares']] 
         
         
-        population_query="SELECT DISTINCT * FROM `ons-hotspot-prod.ingest_risk_model.mid_year_pop19_lsoa`"  #get population to create weights for de-aggregation
-        query_job_pop = super().client.query(population_query ) 
-        pop19_lsoa = query_job_pop.to_dataframe()
+        # get worker population to create weights for de-aggregation
+        workers_query = "SELECT LSOA11 as LSOA11CD, SUM(N_EMPLOYED) as n_workers FROM `ons-hotspot-prod.ingest_risk_model.idbr_2019_lsoa11` GROUP BY LSOA11CD"  
+        query_job_workers = super().client.query(workers_query) 
+        worker19_lsoa = query_job_workers.to_dataframe()
         
-        pop19_lsoa['pop_above18'] = pop19_lsoa.loc[:, 'MF_AGE_19':"MF_AGE_90_PLUS"].sum(axis=1)  #get over 18 ages
-        pop19_lsoa = pop19_lsoa[['LSOA11CD', 'ALL_PEOPLE', 'pop_above18']]
-        
-        lookup_query="SELECT lsoa11cd as LSOA11CD,msoa11cd as MSOA11CD FROM `ons-hotspot-prod.ingest_geography.PCD_OA_LSOA_MSOA_LAD_FEB21_UK_LU`" #get look up for lsoa msoa
+        # get LSOA to MSOA lookup
+        lookup_query = "SELECT lsoa11cd as LSOA11CD,msoa11cd as MSOA11CD FROM `ons-hotspot-prod.ingest_geography.PCD_OA_LSOA_MSOA_LAD_FEB21_UK_LU`" 
         query_job_lookup = super().client.query(lookup_query) 
         lsoa_msoa_lookup = query_job_lookup.to_dataframe()
         
-        lsoa_msoa_lookup = lsoa_msoa_lookup.drop_duplicates() #remove duplicates as lsoas come up multiple time per msoa
+        # remove duplicates since LSOAs appear multiple times per MSOA in this data set
+        lsoa_msoa_lookup = lsoa_msoa_lookup.drop_duplicates() 
 
-        pop19_lsoa_msoa = pd.merge(pop19_lsoa, lsoa_msoa_lookup, \
-                                   left_on='LSOA11CD', right_on='LSOA11CD', how='left')
+        worker19_lsoa_msoa = pd.merge(worker19_lsoa, lsoa_msoa_lookup, left_on='LSOA11CD', right_on='LSOA11CD', how='left')
         
-        del pop19_lsoa, lsoa_msoa_lookup
+        del worker19_lsoa, lsoa_msoa_lookup
         
-        pop19_msoa = pop19_lsoa_msoa.groupby(['MSOA11CD'], \
-                                           as_index=False).agg(msoa_pop=('ALL_PEOPLE','sum'), \
-                                                               msoa_pop_above18=('pop_above18','sum')).reset_index() #get population of msoas from lsoa level
-        pop19_lsoa_msoa = pd.merge(pop19_lsoa_msoa, pop19_msoa, on='MSOA11CD', how='left') 
-        pop19_lsoa_msoa['weight'] = pop19_lsoa_msoa['pop_above18']/pop19_lsoa_msoa['msoa_pop_above18'] #create weights using population
-        people_counts_df_lsoa_daily = pd.merge(people_counts_df_msoa_daily, pop19_lsoa_msoa,\
-                                      left_on='msoa', right_on='MSOA11CD', how='left') #merge footfall with df with weights
+        # get population of workers of MSOAs from LSOA level
+        worker19_msoa = worker19_lsoa_msoa.groupby(['MSOA11CD'], as_index=False).agg(msoa_workers=('n_workers','sum')).reset_index() 
+        
+        worker19_lsoa_msoa = pd.merge(worker19_lsoa_msoa, worker19_msoa, on='MSOA11CD', how='left') 
+        
+        # create weights using population
+        worker19_lsoa_msoa['weight'] = worker19_lsoa_msoa['n_workers']/worker19_lsoa_msoa['msoa_workers'] 
+        
+        # merge footfall df with weights
+        people_counts_df_lsoa_daily = pd.merge(people_counts_df_msoa_daily, worker19_lsoa_msoa, left_on='msoa', right_on='MSOA11CD', how='left') 
         del people_counts_df_msoa_daily
         
-        people_counts_df_lsoa_daily['lsoa_people'] = people_counts_df_lsoa_daily['msoa_people']*people_counts_df_lsoa_daily['weight'] #apply weights to footfall
+        # apply weights to footfall
+        people_counts_df_lsoa_daily['lsoa_people'] = people_counts_df_lsoa_daily['msoa_people']*people_counts_df_lsoa_daily['weight'] 
         people_counts_df_lsoa_daily = people_counts_df_lsoa_daily[['date_dt','LSOA11CD', 'MSOA11CD', 'purpose', 'lsoa_people', 'msoa_people']]
         
-        #get lsoa areas to get footfall per hectares
-        lsoa_area_query="SELECT LSOA11CD, LSOA11NM, AREALHECT FROM `ons-hotspot-prod.ingest_geography.arealhect_lsoa_dec_2011`"
+        # get LSOA areas to calculate footfall per hectare
+        lsoa_area_query = "SELECT LSOA11CD, LSOA11NM, AREALHECT FROM `ons-hotspot-prod.ingest_geography.arealhect_lsoa_dec_2011`"
         query_job_lsoa_area = super().client.query(lsoa_area_query) 
         sam_lsoa_df = query_job_lsoa_area.to_dataframe()
         
@@ -682,10 +695,7 @@ class DeimosAggregated(IData):
         
         people_counts_df_lsoa_daily = people_counts_df_lsoa_daily.drop_duplicates()
         
-        people_counts_df_lsoa_daily.columns = map(str.lower, people_counts_df_lsoa_daily.columns)  #need lower stringged column names to fit in with rest of the pipeline
-        
-        
-
+        people_counts_df_lsoa_daily.columns = map(str.lower, people_counts_df_lsoa_daily.columns)  
         
         return people_counts_df_lsoa_daily
 
@@ -792,9 +802,4 @@ class DeimosEndTrip(IData):
 
         trip_end_count_lsoa_daily['Date'] = pd.to_datetime(trip_end_count_lsoa_daily['Date'])
 
-
-    
-
-
-        
         return trip_end_count_lsoa_daily

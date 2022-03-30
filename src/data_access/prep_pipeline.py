@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import pandas_gbq
 import geopandas as gpd
+from datetime import timedelta, datetime
 
 # Import from local data files
 current_path = os.path.abspath('.')
@@ -19,6 +20,25 @@ from utils import config as cf
 import utils.dynamic as dyn
 
 #############################
+
+def sort_cols(df, cols):
+    '''
+    Simple function to sort a dataframe by the specified column(s) and reset the index. Returns sorted and reindexed dataframe, although assignment is not necessary as the input dataframe is not copied and operations are performed in place.
+    
+    :param df: Dataframe to sort
+    :type df: Pandas DataFrame
+    
+    :param cols: Column(s) to sort the dataframe
+    :type cols: string, or list of strings
+    
+    :return: Sorted and reindexed dataframe
+    :rtype: Pandas DataFrame
+    '''
+    
+    df.sort_values(by=cols, inplace=True)
+    df.reset_index(drop=True, inplace=True)
+    
+    return df
 
 def read_data(table_type, table_dict = cf.data_tables, join_col = 'LSOA11CD', england_only = True):
     '''
@@ -334,7 +354,7 @@ def apply_timelag(dynamic_df, dynamic_df_norm, save_results=True):
     return dynamic_df_lagged_merged
 
 
-def join_cases_to_static_data(static_df):
+def join_cases_to_static_data(static_df, table = 'aggregated_tests_lsoa'):
     """
     Prepare the Test & Trace data containing the number of positive cases at LSOA level. The number of cases
     is left joined to the exist static data to ensure that a record exists for every LSOA in every week.
@@ -342,12 +362,15 @@ def join_cases_to_static_data(static_df):
     :param static_df: The processed static data set
     :type static_df: Pandas DataFrame
     
+    :param table: Target cases table to feed into DataFactory
+    :type table: string
+    
     :return: A Pandas DataFrame containing static variables and cases for each LSOA each week
     :rtype: Pandas DataFrame
     """
-    
+
     # ingest cases data
-    cases_df = factory.get('aggregated_tests_lsoa').create_dataframe()
+    cases_df = factory.get(table).create_dataframe()
 
     # sort cases data by date
     cases_df_datum = cases_df[['Date','LSOA11CD','COVID_Cases']].sort_values(by='Date').reset_index(drop=True)
@@ -393,6 +416,81 @@ def join_cases_to_static_data(static_df):
     cases_static_df.rename(columns={'COVID_Cases':'COVID_Cases_per_unit_area'},inplace=True)
     
     return cases_static_df
+
+
+def join_vax_data(cases_all_weeks_df, df_vax):
+    
+    """
+    Process vaccination data and join to cases data
+    
+    :param cases_all_weeks_df: A dataframe containing the static data and cases data
+    :type cases_all_weeks_df: Pandas DataFrame
+    
+    :param df_vax: A dataframe containing vaccination information
+    :type df_vax: Pandas DataFrame
+    
+    :return: A single dataframe containing the static, cases and vaccination information
+    :rtype: Pandas DataFrame
+    """
+
+    df_vax['Date'] = df_vax['Date'].astype(str)
+
+    vaccn_df_datum = df_vax[['Date',
+                             'LSOA11CD',
+                             'total_vaccinated_first_dose',
+                             'total_vaccinated_second_dose']].sort_values(by='Date').reset_index(drop=True)
+
+    # create a separate dataframe for LSOA
+    vaccn_df_datum = [pd.DataFrame(y).reset_index(drop=True) for x, y in vaccn_df_datum.groupby('LSOA11CD', as_index=False)]
+
+
+    # vaccination data might have missing LSOAs for certain dates
+    # split the data by the LSOAs and force each 
+    # split to have the same number of observations
+    # by left joining with the dates df
+
+    strt_date = datetime.strptime(df_vax['Date'].min(), "%Y-%m-%d").date()
+
+    end_date = datetime.strptime(df_vax['Date'].max(), "%Y-%m-%d").date()
+
+    list_of_dates = pd.date_range(strt_date, end_date, freq='7d')
+
+    list_of_dates = [x.date().strftime('%Y-%m-%d') for x in list_of_dates]
+
+    dates_df = pd.DataFrame(list_of_dates, columns=['Date'])
+
+    vaccn_df_datum_mrgd = []
+
+    for splt_df in vaccn_df_datum:
+
+        splt_df = splt_df.sort_values(by='Date').reset_index(drop=True)
+
+        lsoa = splt_df['LSOA11CD'].unique()[0]
+
+
+        # left-join so any lsoas with no vaccine are not lost
+        df = dates_df.merge(splt_df, how='left', on=['Date'])
+        df['LSOA11CD'] = df['LSOA11CD'].fillna(lsoa)
+        
+        df['total_vaccinated_first_dose'] = df['total_vaccinated_first_dose'].fillna(0)
+        df['total_vaccinated_second_dose'] = df['total_vaccinated_second_dose'].fillna(0)
+
+        vaccn_df_datum_mrgd.append(df)
+
+    vaccn_all_tranches_sbset = pd.concat(vaccn_df_datum_mrgd).reset_index(drop=True)
+
+
+    # join cases with vaccination data
+    cases_vax_all_weeks_df = cases_all_weeks_df.merge(vaccn_all_tranches_sbset, 
+                                                      how='inner', 
+                                                      on=list(np.intersect1d(cases_all_weeks_df.columns, vaccn_all_tranches_sbset.columns)))
+
+    print('Number of null enteries after merging cases with vaccination {}'.format(cases_vax_all_weeks_df[cases_vax_all_weeks_df.isna().any(axis=1)].shape[0]))
+
+    cases_vax_all_weeks_df['Date'] = cases_vax_all_weeks_df['Date'].astype(str)
+
+    return vaccn_all_tranches_sbset, cases_vax_all_weeks_df
+
 
 def join_tranches_mobility_data(cases_all_weeks_df, deimos_footfall_df):
     '''
@@ -452,12 +550,12 @@ def derive_week_number(cases_static_df):
     cases_static_df = cases_static_df.reset_index(drop=True)
 
     # check that every LSOA is present in the data
-    assert cases_static_df.groupby('Date')['LSOA11CD'].count().unique() == cf.n_lsoa
+    # assert cases_static_df.groupby('Date')['LSOA11CD'].count().unique() == cf.n_lsoa, "Number of LSOAs in dataset is not as expected"
     
     return cases_static_df
 
 
-def create_test_data(all_weeks_df, static_df, deimos_footfall_df, idbr_features = cf.tranche_model_idbr_features):
+def create_test_data(all_weeks_df, static_df, deimos_footfall_df, vax_processed_df, idbr_features = cf.tranche_model_idbr_features):
     '''
     Create a test data set which contains records for which mobility data
     is available but cases data is not available. 
@@ -471,6 +569,9 @@ def create_test_data(all_weeks_df, static_df, deimos_footfall_df, idbr_features 
     :param deimos_footfall_df: A DataFrame containing footfall data
     :type deimos_footfall_df: Pandas DataFrame
     
+    :param vax_processed_df: Process vaccinations dataframe output by the 'join_vax_data' function
+    :type vax_processed_df: Pandas DataFrame
+    
     :param idbr_features: List of column names of the IDBR features
     :type idbr_features: [str]
     
@@ -481,12 +582,15 @@ def create_test_data(all_weeks_df, static_df, deimos_footfall_df, idbr_features 
     # merge footfall with the static data
     footfall_static_df = deimos_footfall_df.merge(static_df, how='inner', on=['LSOA11CD'])
     
+    # merge vaccination data
+    footfall_static_vax_df = footfall_static_df.merge(vax_processed_df, how='inner', on=['LSOA11CD','Date'])
+    
     # find the max date for which cases data is avaiable
     date_cutoff = all_weeks_df['Date'].max()
     
     # the test set contains only timestamps where footfall data is available, but not cases data
-    test_df = footfall_static_df[footfall_static_df['Date'] > date_cutoff].reset_index(drop=True)
-    
+    test_df = footfall_static_vax_df[footfall_static_vax_df['Date'] > date_cutoff].reset_index(drop=True)
+ 
     # convert units of mobility features to align with the training data
     test_df = convert_units(df = test_df, 
                             colname = 'worker_visitor_footfall_sqkm',
@@ -500,13 +604,22 @@ def create_test_data(all_weeks_df, static_df, deimos_footfall_df, idbr_features 
                                 colname = feature, 
                                 factor = 0.01)
     
-    # store the date range as a string
+    # calculate the 2 minus 1 field
+    test_df['vax_2_minus_1'] = test_df['total_vaccinated_second_dose'] - test_df['total_vaccinated_first_dose']
+    
+    # normalise by population
+    test_df['vax_2_minus_1'] = test_df['vax_2_minus_1'].div(test_df['ALL_PEOPLE'])
+    
+    # drop the numeric fields that are no longer needed
+    test_df.drop(['ALL_PEOPLE', 'total_vaccinated_first_dose', 'total_vaccinated_second_dose', 'Area'], axis=1, inplace=True)  
+    
+    # store the test data date range as a string
     test_data_range = test_df['Date'].min() + '-' + test_df['Date'].max()
     
     # collapse into one row per LSOA
     test_df = test_df.groupby(['LSOA11CD', 'travel_cluster'])[list(test_df.select_dtypes(include=np.number).columns)].mean().reset_index()
         
-    # insert date range column
+    # insert date range into 'Date' column
     test_df['Date'] = test_data_range
     
     return test_df
@@ -514,7 +627,8 @@ def create_test_data(all_weeks_df, static_df, deimos_footfall_df, idbr_features 
 
 def create_time_tranches(all_weeks_df, 
                          tranche_dates = cf.tranche_dates, 
-                         tranche_description = cf.tranche_description):
+                         tranche_description = cf.tranche_description,
+                         cumulative_vax = True):
     '''
     Function to process all weeks of data into time tranches whose boundaries are
     defined by a list of dates 'tranche_dates'. The 'all_weeks_df' dataframe is split
@@ -531,16 +645,20 @@ def create_time_tranches(all_weeks_df,
     :param tranche_description: A list containing a short description of the conditions in each time tranche
     :type tranche_description: [str]
     
+    :param cumulative_vax: If False, vaccination columns contain the count of vaccinations administered within 
+    each tranche. If True, vaccination columns contain cumulative counts. Default = True.  
+    cumulative vaccinations
+    :type cumulative_vax: bool
+    
     :return: A dataframe containing features aggregated at time tranche level
     :rtype: Pandas DataFrame
     '''
     
-    # list to store a dataframe for each tranche
     tranche_dfs = []
 
     # for each item in the list of tranche boundary dates
     for i, date in enumerate(tranche_dates):
-        
+
         # t1 is the selected date
         t1 = date
 
@@ -553,7 +671,7 @@ def create_time_tranches(all_weeks_df,
 
         # if i is not the final element of the list of dates
         else:
-            
+
             # t2 is the next date in the list
             t2 = tranche_dates[i + 1]
 
@@ -565,42 +683,57 @@ def create_time_tranches(all_weeks_df,
 
             # add a column describing the tranche
             df_time.loc[:, 'tranche_desc'] = tranche_description[i]
-            
+
             # append the dataframe to the list of individual tranche dataframes
             tranche_dfs.append(df_time)
 
-    # Perform aggregation of predictors and target variable for each tranche
-    # Each tranche contains multiple weeks, aggregation results in mean of each of the numerical features
-    # In practice, the static features are the same for each week, so we are averaging footfall over the tranche
-    # Each individual tranche dataframe will have one unique record for each LSOA (because of averaging)
-    
+
     tranche_dfs_agg = []
 
     for df in tranche_dfs:
 
         # make a copy of the dataframe
         tranche_df = df.copy()
-                
+
         # derive a string containing the date range of the tranche
         date_range_string = str(tranche_df['Date'].min()) + '-' + str(tranche_df['Date'].max())
 
         # drop the date column
         tranche_df.drop('Date', axis=1, inplace=True) 
-        
+
         # insert the date range string as a new date column
         tranche_df['Date'] = date_range_string
 
         # define columns to group by
         group_by_cols = ['Date', 'LSOA11CD', 'tranche_desc', 'travel_cluster']
 
-        # compute the mean over each week in the tranche
-        tranche_df = tranche_df.groupby(group_by_cols).mean().reset_index()
+        # define the vaccination columns - these are sum aggregated later
+        vax_cols = ['total_vaccinated_first_dose', 'total_vaccinated_second_dose']
+
+        # define the vaccination columns - these are mean aggregated later
+        other_cols = [x for x in df.columns if x not in vax_cols]
+
+        # get the total vaccination uptake in each tranche
+        df_sums = tranche_df.groupby(group_by_cols)[[x for x in vax_cols if x not in group_by_cols]].sum().reset_index()
+
+        # get the mean value for the rest of the predictors and the target variable in each tranche
+        df_means = tranche_df.groupby(group_by_cols)[[x for x in other_cols if x not in group_by_cols]].mean().reset_index()
+
+        # merge back together
+        tranche_df = df_sums.merge(df_means, on=group_by_cols, how='inner')
 
         # sort by LSOA code
         tranche_df = tranche_df.sort_values(by='LSOA11CD').reset_index(drop=True)
 
         # append the df to the list of aggregated dataframes
         tranche_dfs_agg.append(tranche_df)
+
+    if cumulative_vax:
+
+        # For each tranche, we evaluate the cumulative vaccination uptake (relative to the previous tranche)
+        for x in range(len(tranche_dfs_agg)-1):
+            tranche_dfs_agg[x+1][vax_cols[0]] = tranche_dfs_agg[x+1][vax_cols[0]] + tranche_dfs_agg[x][vax_cols[0]]
+            tranche_dfs_agg[x+1][vax_cols[1]] = tranche_dfs_agg[x+1][vax_cols[1]] + tranche_dfs_agg[x][vax_cols[1]]
 
     # stack each tranche into one dataframe
     all_tranches_df = pd.concat(tranche_dfs_agg).reset_index(drop=True)

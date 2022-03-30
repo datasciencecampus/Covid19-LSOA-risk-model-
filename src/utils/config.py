@@ -1,6 +1,5 @@
 import numpy as np
 
-
 data_start_date = "'2020-04-01'"  #date to select data from
 
 model_start_date = "2021-01-01" #date to begin modelling
@@ -307,7 +306,7 @@ data_location_big_query = {}
 
 data_location_big_query['cases'] = "ons-hotspot-prod.ingest_track_and_trace.aggregated_positive_tests_lsoa"
 
-data_location_big_query['vaccination'] = "ons-hotspot-prod.ingest_vaccination.lsoa_vaccinations_8_july_2021"
+data_location_big_query['vaccination'] = "ons-hotspot-prod.ingest_vaccination.lsoa_vaccinations_new"
 
 data_location_big_query['mobility_MARS'] = "wip.mars_daily_trips_to_and_from_home_2"
 
@@ -419,6 +418,7 @@ feature_pretty_names = {
                        'meat_and_fish_processing':'Meat & Fish Processing Workers',
                        'ready_meals_textiles':'Ready Meals & Textile Workers',
                        'worker_visitor_footfall_sqm':'Worker Visitor Footfall',
+                       'vax_2_minus_1':'Excess Second Vaccinations',
     
                         # quintiles
                        'IMD_INCOME_SCORE_quint':'IMD Income Score Quintile',
@@ -438,13 +438,11 @@ feature_pretty_names = {
                        'care_homes_warehousing_quint':'Care, Warehousing Workers Quintile',
                        'worker_visitor_footfall_sqm_quint':'Worker Visitor Footfall Quintile',
                        'ready_meals_textiles_quint':'Ready Meals & Textile Workers Quintile',
-    
-                        # ready meals rank
-                       'ready_meals_rank':'Ready Meals Workers Rank'
+                       'vax_2_minus_1_quint':'Excess Second Vaccinations Quintile'
                          }
 
 # Travel cluster pretty names for dashboard
-tc_pretty_names = {'L1. >70% metropolitan core dwellers':' >70% Metropilitan Core Dwellers',
+tc_pretty_names = {'L1. >70% metropolitan core dwellers':' >70% Metropolitan Core Dwellers',
                   'L2. >70% outer metropolitan dwellers':'>70% Outer Metropolitan Core Dwellers',
                   'L3. >70% suburban dwellers':'>70% Suburban Dwellers',
                   'L4. >70% exurban dwellers':'>70% Exurban Dwellers',
@@ -464,10 +462,10 @@ use_regularisation = True
 n_lsoa = 32844
 
 # number of tranches to model
-n_tranches = 8
+n_tranches = 7
 
 # Dates to slit on for the different time tranches
-tranche_dates = ['2020-04-26','2020-08-31','2020-11-14','2020-12-31','2021-02-14','2021-04-29','2021-07-15','2021-08-31']
+tranche_dates = ['2020-04-26', '2020-08-31', '2020-11-14', '2020-12-31', '2021-02-14' ,'2021-04-29', '2021-07-15']
 
 # Description of each tranche
 #eg. period between '2020-04-26'to '2020-08-31' is of low prevalence and majority of schools closed in that period
@@ -477,8 +475,7 @@ tranche_description = ['low_prev_no_school',
                        'high_prev_no_school_alph_vaccn',
                        'low_prev_school_opn_vaccn_dbl',
                        'high_prev_school_opn_dlta_vaccn_dbl',
-                       'lifting_lockdown',
-                       'high_prev_school_open_delta_vaccn']
+                       'lifting_lockdown']
 
 # the key is a new column to be created in the static data
 # the values in the new column are the sum of the columns listed in the value of this dictionary

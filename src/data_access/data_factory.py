@@ -82,7 +82,7 @@ class DataFactory:
                 query="SELECT * FROM `ons-hotspot-prod.ingest_geography.lsoa_mobility_cluster_ew_lu`" #used in apply_time_lag
                 return NoProcessing(query)
             if data_name == 'flow_to_work':
-                query="SELECT * FROM `ons-hotspot-prod.wip.idbr_census_flowtowork_lsoa_highindustry`"
+                query="SELECT * FROM `ons-hotspot-prod.review_ons.idbr_census_flowtowork_lsoa_highindustry`"
                 return NoProcessing(query) #used in create_static
             if data_name == 'lsoa_dynamic':
                 table = conf.dynamic_data_file
@@ -143,7 +143,7 @@ class DataFactory:
                 return NoProcessing(query)  
             # fetch static data for unit tests
             if data_name.startswith('unit_test'):
-                query = f"SELECT * FROM {'wip.' + data_name}"
+                query = f"SELECT * FROM {'review_ons.' + data_name}"
                 return NoProcessing(query)
             raise Exception('Data Class Not Found')
         except Exception as _e:
