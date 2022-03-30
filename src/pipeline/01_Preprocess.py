@@ -1,4 +1,3 @@
-# import packages
 import os
 import sys
 import numpy as np
@@ -30,7 +29,7 @@ static_df = pp.geo_merge(static_df_raw)
 static_df = pp.normalise_data(static_df, 'static')
     
 # remove ethnicity subgroups
-ethnicity_list = dt.get_ethnicities_list(static_df,subgroups=True)
+ethnicity_list = dt.get_ethnicities_list(static_df, subgroups=True)
 static_df = static_df.drop(columns=ethnicity_list) 
 
 #fill 0s (NaNs exist for industries in which zero residents of a given LSOA work)
@@ -38,7 +37,7 @@ static_df = static_df.fillna(0)
 
 static_df.drop(columns=cf.static_col_drop, inplace=True)
 
-# # combine the flow to work columns from factor analysis
+# combine the flow to work columns from factor analysis
 static_df = pp.sum_features(static_df)
 
 # pre-processing for the two way fixed effects model
@@ -51,7 +50,7 @@ if cf.model_type == "two_way_fixed_effects":
     # join on subset of static data for geographic variables
     col_list = cf.static_subset
     static_subset_df = static_df[col_list]   
-    dynamic_df = dynamic_df.merge(static_subset_df,on=['LSOA11CD'],how='right')
+    dynamic_df = dynamic_df.merge(static_subset_df, on=['LSOA11CD'], how='right')
 
     # date filter due to join being changed to outer resulting in extraneous rows prior to the pandemic
     dynamic_df = dynamic_df[dynamic_df['Date'] >= '2020-10-04']
@@ -66,14 +65,14 @@ if cf.model_type == "two_way_fixed_effects":
     lag_granularity = cf.chosen_granularity_for_lag
     dynamic_df_norm = dynamic_df.copy()
 
-    df_travel_clusters = dynamic_df_norm.drop_duplicates(subset='LSOA11CD',keep='first')[[lag_granularity,'Area','ALL_PEOPLE']].groupby(lag_granularity).sum().reset_index()\
-    .rename(columns={'Area':'Area_chosen_geo','ALL_PEOPLE':'Population_chosen_geo'})
+    df_travel_clusters = dynamic_df_norm.drop_duplicates(subset='LSOA11CD', keep='first')[[lag_granularity,'Area','ALL_PEOPLE']].groupby(lag_granularity).sum().reset_index()\
+    .rename(columns={'Area':'Area_chosen_geo', 'ALL_PEOPLE':'Population_chosen_geo'})
 
     dynamic_df_norm = dynamic_df_norm.merge(df_travel_clusters, how='left', on=lag_granularity)
 
     # convert back to raw so we can divide by travel cluster area
-    for i in [i for i in dynamic_df_norm.columns.tolist() if (('footfall' in i)|('inflow' in i))]:
-        dynamic_df_norm[i] = dynamic_df_norm[i]*dynamic_df_norm['Area']  
+    for i in [i for i in dynamic_df_norm.columns.tolist() if (('footfall' in i) | ('inflow' in i))]:
+        dynamic_df_norm[i] = dynamic_df_norm[i] * dynamic_df_norm['Area']  
 
     # normalise dynamic data
     dynamic_df_norm = pp.normalise_data(dynamic_df_norm, 'dynamic_norm')
@@ -181,4 +180,4 @@ else:
 static_df.drop(['Area','ALL_PEOPLE'], axis=1, inplace=True)
 
 # write to BigQuery
-static_df.to_gbq(cf.static_data_file, project_id=cf.project_name,if_exists='replace')
+static_df.to_gbq(cf.static_data_file, project_id=cf.project_name, if_exists='replace')

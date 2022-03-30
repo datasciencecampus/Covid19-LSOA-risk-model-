@@ -9,8 +9,6 @@ from data_access.data_factory import DataFactory as factory
 from utils import config as cf
 from utils import dashboard as dash
 
-##### LOAD DATA SETS #######
-
 # Coefficients from the regression with regularisation
 df_reg_coefs = factory.get('tranche_regularised_coefs').create_dataframe()
 
@@ -40,7 +38,7 @@ df_residuals = df_preds_all_tranches[['LSOA11CD','tranche','Residual']]
 df_latest_pred = df_latest_pred[['LSOA11CD','Predicted_cases_test']]
 
 # Filter the features for the latest tranche for plotting
-df_features = df_features[df_features['tranche_order'] == cf.n_tranches]
+df_features = df_features[df_features['tranche_order'] == df_features['tranche_order'].max()]
 
 # Drop the column to allow for quintile calculation on all numerical columns
 df_features.drop(['Date','tranche_order','tranche_desc','COVID_Cases_per_unit_area'], axis=1, inplace=True)
@@ -53,8 +51,6 @@ df_encoded = dash.encode_column(df_quint, 'travel_cluster')
 
 # pivot the data set
 df_features_pivot = dash.pivot_results(df_encoded)
-
-#### PRETTY NAMES ####
 
 # Rename column to fit into the for loop below
 df_features_pivot.rename({'feature':'Features'}, axis='columns', inplace=True)
