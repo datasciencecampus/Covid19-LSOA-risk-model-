@@ -57,9 +57,7 @@ class DataFactory:
             if data_name == 'dynamic_changes_weekly':
                 return do.DynamicChangesWeekly()
             if data_name=='Deimos_aggregated': 
-                return do.DeimosAggregated()
-            # if data_name=='Deimos_trip_end_count':
-            #     return do.DeimosEndTrip()     
+                return do.DeimosAggregated()   
             if data_name == 'flow_to_work':
                 table = conf.data_location_big_query['flow_to_work']
                 query = f"SELECT * FROM `{table}`"
@@ -86,11 +84,23 @@ class DataFactory:
                 query = f"SELECT * FROM {table}"
                 return NoProcessing(query)
             
+            # non-normalised dynamic features
+            if data_name == 'dynamic_lsoa':
+                table = conf.dynamic_data_file
+                query = f"SELECT * FROM `{table}`" 
+                return NoProcessing(query)
+            
+            # normalised dynamic features
+            if data_name == 'dynamic_raw_norm_chosen_geo':
+                table = conf.dynamic_data_file_normalised
+                query = f"SELECT * FROM `{table}`"
+                return NoProcessing(query)   
+            
             # outputs of time tranches model
             # these data sets are read into the 03_Outputs.py
             if data_name == 'tranche_regularised_coefs':
                 table = conf.tranche_coefs_regularisation
-                query=f"SELECT * FROM `{table}`"
+                query = f"SELECT * FROM `{table}`"
                 return NoProcessing(query)
             if data_name == 'tranche_non_reg_std_coefs':
                 table = conf.tranche_coefs_standardised
@@ -107,11 +117,7 @@ class DataFactory:
             if data_name == 'tranche_preds_latest':
                 table = conf.tranche_preds_latest
                 query = f"SELECT * FROM `{table}`"
-                return NoProcessing(query)      
-            if data_name == 'tranche_model_features':
-                table = conf.tranche_model_features_gbq_loc
-                query = f"SELECT * FROM `{table}`"
-                return NoProcessing(query)  
+                return NoProcessing(query)       
             
             # data used for unit tests
             if data_name.startswith('unit_test'):
