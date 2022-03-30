@@ -57,6 +57,8 @@ static_columns = ['LSOA11CD', 'LSOA11NM', 'MSOA11CD', 'MSOA11NM', 'LTLA20CD', 'L
        'textiles', 'warehousing', 'LSOA11NMW', 'geometry']
 
 # dictionary for testing the normalise_data function 
+# key1 and key2 should be ignored as they are not dictionaries
+# and key4 should be ignored as the 'flag' key value is not 'test'
 normalise_dic = {
      'key1' : ['col1', 'col2']
     ,'key2': 'test'

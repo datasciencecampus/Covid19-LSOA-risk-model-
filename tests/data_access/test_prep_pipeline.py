@@ -182,9 +182,6 @@ def cases_static_week():
 
 def test_derive_week_number(cases_static, cases_static_week):
     
-    # Ensure data types are as expected
-    cases_static['Date'] = pd.to_datetime(cases_static['Date'].dt.date)
-    
     df = pp.derive_week_number(cases_static)
     
     pd.testing.assert_frame_equal(df, cases_static_week)
@@ -216,6 +213,9 @@ def test_join_vax_data(cases_static_week, vax_processed_df, cases_static_week_va
     # Read in raw vaccinations data (used only once)
     vaccinations = factory.get('unit_test_vaccinations').create_dataframe()
     pp.sort_cols(vaccinations, ['LSOA11CD', 'Date'])
+    
+    # ensure Date column is of the right type to allow a join
+    cases_static_week['Date'] = pd.to_datetime(cases_static_week['Date']).dt.date.astype(str)
     
     df_vax, df_cases_vax = pp.join_vax_data(cases_static_week, vaccinations)
     
