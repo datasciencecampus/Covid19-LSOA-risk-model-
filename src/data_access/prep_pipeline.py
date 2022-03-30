@@ -131,8 +131,6 @@ def normalise_data(df, flag, dic = cf.features_dict):
             norm_by = None
         else:
             norm_by = df[dic[key]['by']]
-           
-        print(f"norming by {norm_by}")
         
         df = dt.normalise(df, dic[key]['columns'], by = norm_by, suffix=dic[key]['suffix'])
     
