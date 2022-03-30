@@ -54,6 +54,11 @@ class DataFactory:
                 return do.LSOAVaccinations() #used in create_dynamic,
             if data_name == 'flows_mars_data':
                 return do.FlowsMarsData() # not currently used
+            
+            if data_name == 'geo_area':
+                query = 'SELECT LSOA11CD, Shape__Area FROM `ons-hotspot-prod.ingest_geography.lsoa_2011_area_centroid`'
+                return NoProcessing(query)
+            
             if data_name == 'static_subset_for_norm': #used in create_dynamic for normalising variables
                 return do.StaticSubset()
             if data_name == 'static_normalised':    
@@ -93,7 +98,7 @@ class DataFactory:
             if data_name == 'dynamic_raw_norm_chosen_geo':
                 table = conf.dynamic_data_file_normalised
                 query = f"SELECT * FROM `{table}`" #created in create_dynamic, used in apply_timelag
-                return NoProcessing(query)     
+                return NoProcessing(query)   
             
             # tranches model inputs
             if data_name == 'tranche_model_input':

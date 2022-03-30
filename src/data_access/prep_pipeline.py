@@ -81,7 +81,7 @@ def geo_merge(df, geo_col = 'geometry'):
     
     return df
 
-def geo_merge_precalc(df, use_local_file=True):
+def geo_merge_precalc(df):
     '''
     Read in pre-calculated area of LSOAs and merge to the supplied dataframe as an 'Area' column. Pre-calculated area is more accurate than calculating using a geopandas dataframe due to accuracy and rounding within the polygons, especially for smaller LSOAs. 
     
@@ -90,19 +90,11 @@ def geo_merge_precalc(df, use_local_file=True):
     :param df: Input dataframe, from read_data function
     :type df: Pandas DataFrame
     
-    :param use_local_file: Temporary parameter for using local copy of geo file, as this is currently not uploaded to GCP. Default True.
-    :type use_local_file: Bool
-    
     :return: DataFrame with Area
     :rtype: Pandas DataFrame
     '''
     
-    if use_local_file:
-        geo_df = pd.read_csv('/home/jupyter/Covid19-LSOA-risk-model-/src/lsoa_boundaries.csv')
-    else:
-        raise Exception('Not yet implemented')
-    
-    geo_df = geo_df[['LSOA11CD', 'Shape__Area']]
+    geo_df = factory.get('geo_area').create_dataframe()
     
     # convert area to correct units
     convert_units(geo_df, 'Shape__Area', 10 ** -6, 'Area')
