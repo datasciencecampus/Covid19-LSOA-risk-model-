@@ -61,22 +61,13 @@ def test_read_data_dynamic_all(dynamic_result):
 def test_geo_merge_static():
     geom_df = factory.get('LSOA_2011').create_dataframe()
     
-    geom_df = pp.geo_merge(geom_df)
+    geom_df = pp.geo_merge_precalc(geom_df[['LSOA11CD']])
     
     # dataframe to test function against
-    geom_result = factory.get('unit_test_geometry').create_dataframe()
-    
-    # convert to strings as geom_test geometry column will be read in as object
-    # whereas geom_df geometry column will be a geometry type
-    geom_df['geometry'] = geom_df['geometry'].astype(str)
-    geom_result['geometry'] = geom_result['geometry'].astype(str)
+    geom_result = factory.get('unit_test_geo_precalc').create_dataframe()
     
     pd.testing.assert_frame_equal(geom_df, geom_result)
     
-    # I think geo merge should be replaced by a lookup for the Areas 
-    # they're not going to change, and the current calculation uses geographic CRS which is slightly inaccurate when calculating areas
-    # and the effort required to get an accurate projection is non-trivial
-
 def test_normalise_data():
     # input dataframe
     df = factory.get('unit_test_normalise').create_dataframe()
