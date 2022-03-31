@@ -210,9 +210,7 @@ features_dict['dynamic_area_norm'] = {
                 'visitor_footfall_sqkm',
                 'resident_footfall_sqkm',
                 'total_footfall_sqkm',
-                'worker_visitor_footfall_sqkm',
-                'commute_inflow_sqkm',
-                'other_inflow_sqkm']
+                'worker_visitor_footfall_sqkm']
 }
 
 features_dict['dynamic_pop'] = {
@@ -364,13 +362,13 @@ alphas_val = np.logspace(-3, 3, 101)
 
 #Lag_configurations
 cols_not_to_lag = ['Date','LSOA11CD']  
-mobility_cols_to_lag = ['worker_visitor_footfall_sqkm_norm_lag_area','resident_footfall_sqkm_norm_lag_area','commute_inflow_sqkm_norm_lag_area','other_inflow_sqkm_norm_lag_area']
+mobility_cols_to_lag = ['worker_visitor_footfall_sqkm_norm_lag_area','resident_footfall_sqkm_norm_lag_area']
 vacc_cols_to_lag = [] 
 
 
 #modelling - These vars will be included in the dataset that undergoes modelling (they do not have to be included in the modelling itself if not wanted)
 dynamic_vacc = []
-dynamic_mobility = ['worker_visitor_footfall_sqkm','resident_footfall_sqkm','commute_inflow_sqkm','other_inflow_sqkm']
+dynamic_mobility = ['worker_visitor_footfall_sqkm','resident_footfall_sqkm']
 
 # GCP dataset prefix for static and dynamic risk model outputs
 # suffix will change for static/dynamic and whether zero inflation is applied
