@@ -54,7 +54,8 @@ class DataFactory:
                 return do.LSOAVaccinations()
 
             if data_name == 'geo_area':
-                query = 'SELECT LSOA11CD, Shape__Area FROM `ons-hotspot-prod.ingest_geography.lsoa_2011_area_centroid`'
+                table = conf.data_location_big_query['lsoa_area']
+                query = f'SELECT LSOA11CD, Shape__Area FROM `{table}`'
                 return NoProcessing(query)
             
             if data_name == 'all_tranches_dynamic_static':
