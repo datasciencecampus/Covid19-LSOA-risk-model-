@@ -104,6 +104,29 @@ def geo_merge(df, geo_col = 'geometry'):
     
     return df
 
+def geo_merge_precalc(df):
+    '''
+    Read in pre-calculated area of LSOAs and merge to the supplied dataframe as an 'Area' column. Pre-calculated area is more accurate than calculating using a geopandas dataframe due to accuracy and rounding within the polygons, especially for smaller LSOAs. 
+    
+    File is taken from https://geoportal.statistics.gov.uk/datasets/ons::lower-layer-super-output-areas-december-2011-boundaries-full-extent-bfe-ew-v3/about
+    
+    :param df: Input dataframe, from read_data function
+    :type df: Pandas DataFrame
+    
+    :return: DataFrame with Area
+    :rtype: Pandas DataFrame
+    '''
+    
+    geo_df = factory.get('geo_area').create_dataframe()
+    
+    # convert area to correct units
+    convert_units(geo_df, 'Shape__Area', 10 ** -6, 'Area')
+    
+    df = df.merge(geo_df, on='LSOA11CD')
+    
+    return df
+    
+
 def normalise_data(df, flag, dic = cf.features_dict):
     
     '''

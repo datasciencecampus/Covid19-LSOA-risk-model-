@@ -23,7 +23,7 @@ static_df_raw = pp.read_data('static')
 print("Processing static data...")
 
 # merge geography polygon data to find LSOA areas
-static_df = pp.geo_merge(static_df_raw)
+static_df = pp.geo_merge_precalc(static_df_raw)
 
 # normalise static data
 static_df = pp.normalise_data(static_df, 'static')

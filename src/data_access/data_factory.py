@@ -52,6 +52,12 @@ class DataFactory:
                 return do.LSOADailyFootfall()  
             if data_name == 'lsoa_vaccinations':
                 return do.LSOAVaccinations()
+
+            if data_name == 'geo_area':
+                table = conf.data_location_big_query['lsoa_area']
+                query = f'SELECT LSOA11CD, Shape__Area FROM `{table}`'
+                return NoProcessing(query)
+            
             if data_name == 'all_tranches_dynamic_static':
                 return do.AllTranches() 
             if data_name == 'dynamic_changes_weekly':
@@ -69,6 +75,7 @@ class DataFactory:
               
             # processed time tranches model inputs
             # these data sets are read in by the time tranches modelling functions
+
             if data_name == 'tranche_model_input':
                 table = conf.tranches_model_input_processed
                 query = f"SELECT * FROM {table}"

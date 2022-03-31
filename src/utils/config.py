@@ -22,6 +22,7 @@ data_location_big_query['vaccination'] = "ons-hotspot-prod.ingest_vaccination.ls
 data_location_big_query['mobility_DEIMOS'] = "ons-hotspot-prod.review_ons.people_counts_df_lsoa_daily_latest"
 data_location_big_query['deimos_aggregated'] = "ons-hotspot-prod.ingest_deimos_2021.uk_footfall_people_counts_ag"
 data_location_big_query['lsoa_2001_to_2011_lookup'] = "ons-hotspot-prod.ingest_geography. lsoa_2001_to_2011_look_up"
+data_location_big_query['lsoa_area'] = "ons-hotspot-prod.ingest_geography.lsoa_2011_area_centroid"
 
 ######################
 ## Section B - Location to write intermediate data sets created during the modelling process
