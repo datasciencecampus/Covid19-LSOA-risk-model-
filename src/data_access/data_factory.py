@@ -128,7 +128,7 @@ class DataFactory:
             
             # data used for unit tests
             if data_name.startswith('unit_test'):
-                query = f"SELECT * FROM {'review_ons.' + data_name}"
+                query = f"SELECT * FROM {'review_ons.' + data_name}" 
                 return NoProcessing(query)
             raise Exception('Data Class Not Found')
         except Exception as _e:
