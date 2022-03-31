@@ -65,6 +65,9 @@ def read_data(table_type, table_dict = cf.data_tables, join_col = 'LSOA11CD', en
     df_final = pd.DataFrame()
     
     for table in table_list:
+        
+        print(table)
+        
         df = factory.get(table).create_dataframe()
         if len(df_final) == 0:
             df_final = df
@@ -101,6 +104,29 @@ def geo_merge(df, geo_col = 'geometry'):
     
     return df
 
+def geo_merge_precalc(df):
+    '''
+    Read in pre-calculated area of LSOAs and merge to the supplied dataframe as an 'Area' column. Pre-calculated area is more accurate than calculating using a geopandas dataframe due to accuracy and rounding within the polygons, especially for smaller LSOAs. 
+    
+    File is taken from https://geoportal.statistics.gov.uk/datasets/ons::lower-layer-super-output-areas-december-2011-boundaries-full-extent-bfe-ew-v3/about
+    
+    :param df: Input dataframe, from read_data function
+    :type df: Pandas DataFrame
+    
+    :return: DataFrame with Area
+    :rtype: Pandas DataFrame
+    '''
+    
+    geo_df = factory.get('geo_area').create_dataframe()
+    
+    # convert area to correct units
+    convert_units(geo_df, 'Shape__Area', 10 ** -6, 'Area')
+    
+    df = df.merge(geo_df, on='LSOA11CD')
+    
+    return df
+    
+
 def normalise_data(df, flag, dic = cf.features_dict):
     
     '''
@@ -128,7 +154,7 @@ def normalise_data(df, flag, dic = cf.features_dict):
             norm_by = None
         else:
             norm_by = df[dic[key]['by']]
-           
+        
         df = dt.normalise(df, dic[key]['columns'], by = norm_by, suffix=dic[key]['suffix'])
     
     return df
@@ -223,46 +249,45 @@ def apply_timelag(dynamic_df, dynamic_df_norm, save_results=True):
     tl = dyn.TimeLag()
     
     # calculate and store lag values for mobility
-    lag_values_mobility={}
+    lag_values_mobility = {}
 
     for c in cf.mobility_cols_to_lag:
-        lag_values_mobility[f'{c}']=tl.get_time_lag_value(dfs = dynamic_df_norm_split, 
+        lag_values_mobility[f'{c}'] = tl.get_time_lag_value(dfs = dynamic_df_norm_split, 
                                                           trgt = 'COVID_Cases_norm_lag_area',
                                                           vacc = 'total_vaccinated_first_dose_norm_lag_pop',
                                                           mobility = c, 
                                                           region = lag_granularity,
                                                           window_days = 0,
                                                           start_date = '2020-01-01',
-                                                          n_lag=12, 
-                                                          plt_flg=True, 
-                                                          moblty_flag=True)
+                                                          n_lag = 12, 
+                                                          plt_flg = True, 
+                                                          moblty_flag = True) 
         
     # calculate and store lag values for vaccination
     # currently empty because cf.vacc_cols_to_lag is empty
-    lag_values_vacc={}
+    lag_values_vacc = {}
     for c in cf.vacc_cols_to_lag:
-        lag_values_vacc[f'{c}']=tl.get_time_lag_value(dfs = dynamic_df_norm_split, 
+        lag_values_vacc[f'{c}'] = tl.get_time_lag_value(dfs = dynamic_df_norm_split, 
                                                       trgt = 'COVID_Cases_norm_lag_area',
                                                       vacc = c,
                                                       mobility = 'worker_visitor_footfall_sqkm', 
                                                       region = lag_granularity,
                                                       window_days = 30, 
                                                       start_date = '2020-01-01',
-                                                      n_lag=12, 
-                                                      plt_flg=True,
-                                                      moblty_flag=False)
+                                                      n_lag = 12, 
+                                                      plt_flg = True,
+                                                      moblty_flag = False)
         
     # making stationary if wanted
     # split the data for each LSOA
     dynamic_df_lsoa = [pd.DataFrame(y) for x, y in dynamic_df.groupby('LSOA11CD', as_index=False)]
 
     # flag for whether to perform differencing on mobility and vaccination data
-    # TODO add to config and as parameter here
-    flg_stnrty_both=False  
+    flg_stnrty_both = False  
     
     # fetch names of columns which were lagged
-    mobility_vars=[s.replace('_norm_lag_area','') for s in  list(lag_values_mobility.keys())] 
-    vacc_vars=[s.replace('_norm_lag_pop','') for s in  list(lag_values_vacc.keys())] 
+    mobility_vars = [s.replace('_norm_lag_area','') for s in  list(lag_values_mobility.keys())] 
+    vacc_vars = [s.replace('_norm_lag_pop','') for s in  list(lag_values_vacc.keys())] 
     
     # TODO could replace this bit with a group by to avoid concat
     
@@ -307,9 +332,7 @@ def apply_timelag(dynamic_df, dynamic_df_norm, save_results=True):
 
     dynamic_df_lagged_merged = dynamic_df_lagged_merged.merge(df_lagged_cases, on=['LSOA11CD', 'Date'], how='inner')
 
-    # TODO change this to fetch the travel clusters from the static_df in the main script
-    # columns produced are LSOA11CD and travel_cluster
-    travel_clusters=factory.get('mobility_clusters_processed').create_dataframe()
+    travel_clusters = factory.get('mobility_clusters_processed').create_dataframe()
 
     dynamic_df_lagged_merged = dynamic_df_lagged_merged.merge(travel_clusters, on = ['LSOA11CD'], how='inner')
     
@@ -417,13 +440,13 @@ def join_vax_data(cases_all_weeks_df, df_vax):
                              'total_vaccinated_first_dose',
                              'total_vaccinated_second_dose']].sort_values(by='Date').reset_index(drop=True)
 
-    # create a separate dataframe for LSOA
+    # create a separate dataframe for each LSOA
     vaccn_df_datum = [pd.DataFrame(y).reset_index(drop=True) for x, y in vaccn_df_datum.groupby('LSOA11CD', as_index=False)]
 
 
     # vaccination data might have missing LSOAs for certain dates
     # split the data by the LSOAs and force each 
-    # split to have the same number of observations
+    # split to have the same number of observations 
     # by left joining with the dates df
 
     strt_date = datetime.strptime(df_vax['Date'].min(), "%Y-%m-%d").date()
@@ -443,7 +466,6 @@ def join_vax_data(cases_all_weeks_df, df_vax):
         splt_df = splt_df.sort_values(by='Date').reset_index(drop=True)
 
         lsoa = splt_df['LSOA11CD'].unique()[0]
-
 
         # left-join so any lsoas with no vaccine are not lost
         df = dates_df.merge(splt_df, how='left', on=['Date'])
@@ -521,7 +543,7 @@ def derive_week_number(cases_static_df):
     cases_static_df['week'] = cases_static_df['Date'].map(date_dict)
     
     # not sure why we do this, maybe drop?
-    cases_static_df['Date']=cases_static_df['Date'].astype(str)
+    cases_static_df['Date'] = cases_static_df['Date'].astype(str)
 
     # remove the index - again not sure why we do this
     cases_static_df = cases_static_df.reset_index(drop=True)
@@ -723,7 +745,7 @@ def create_time_tranches(all_weeks_df,
 
 def derive_tranche_order(all_tranches_df, tranche_description = cf.tranche_description):
     '''
-    Create a nested dictionary of tranch dates, descriptions and order by tranche number.
+    Create a nested dictionary of tranche dates, descriptions and order by tranche number.
     Use the dictionary to create a new column 'tranche_order 'showing the tranche number 
     that each record corresponds to.
     
@@ -757,8 +779,8 @@ def derive_tranche_order(all_tranches_df, tranche_description = cf.tranche_descr
 
 def convert_units(df, colname, factor, new_colname=None):
     '''
-    Multiply a dataframe column by a factor and replace the original value
-    with the multiplied value. Rename the column to reflect the new units.
+        Multiply a dataframe column by a factor and replace the original value
+        with the multiplied value. Rename the column to reflect the new units.
     
     :param df: A dataframe containing a column whose units should be multipled by
     the user specified factor
